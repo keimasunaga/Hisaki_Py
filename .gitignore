@@ -1,3 +1,4 @@
 __pycache__/*
 paths.py
 .DS_Store
+general/__pycache__/*
