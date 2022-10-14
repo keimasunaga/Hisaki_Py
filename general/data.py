@@ -4,9 +4,14 @@ import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
 
-from .variables import dataloc, ext_primary, ext_total, ext_offset
+from paths import dataloc
 from .time import str2Dt
 from .calib import get_cal_daily, get_cal, get_xbin_lim
+
+# Characteristic extensions
+ext_primary = 0 # Primary
+ext_total = 1   # Total
+ext_offset = 2  # Offset
 
 class HskData:
     '''

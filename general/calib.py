@@ -1,6 +1,6 @@
 import numpy as np
 import astropy.io.fits as fits
-from .variables import dataloc, calloc
+from paths import dataloc, calloc
 
 def get_cal():
     '''
