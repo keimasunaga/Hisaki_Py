@@ -325,7 +325,7 @@ def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=F
 
     return ax_out
 
-def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
 
     if ext is None:
         ext = get_ext_all(hdul)
@@ -337,7 +337,8 @@ def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, avgpixel=False, Rayleigh=F
     except FileNotFoundError:
         print('Cal file does not exist, use v0...')
         xcal, C2R, C2Rtbl = get_cal()
-    ycal = np.arange(1024)
+    if ycal is None:
+        ycal = np.arange(1024)
     if wvlim is not None:
         xlim = get_xbin_lim(wvlim)
     if isinstance(ext, (int, np.integer)):
