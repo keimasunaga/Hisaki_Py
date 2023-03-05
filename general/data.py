@@ -256,7 +256,10 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
     if ext is None:
         ext = get_ext_all(hdul)
     timeDt = get_timeDt(hdul, ext)
-    Dt_mid = timeDt[int(np.size(timeDt)/2)]
+    if np.size(timeDt)>1:
+        Dt_mid = timeDt[int(np.size(timeDt)/2)]
+    else:
+        Dt_mid = timeDt
     date = str(Dt_mid.year).zfill(4) + str(Dt_mid.month).zfill(2) + str(Dt_mid.day).zfill(2)
     try:
         xcal, C2R, C2Rtbl = get_cal_daily(date)
