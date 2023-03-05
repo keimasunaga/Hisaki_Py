@@ -4,9 +4,14 @@ import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
 
-from .variables import dataloc, ext_primary, ext_total, ext_offset
+from paths import dataloc
 from .time import str2Dt
 from .calib import get_cal_daily, get_cal, get_xbin_lim
+
+# Characteristic extensions
+ext_primary = 0 # Primary
+ext_total = 1   # Total
+ext_offset = 2  # Offset
 
 class HskData:
     '''
@@ -320,7 +325,7 @@ def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=F
 
     return ax_out
 
-def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
 
     if ext is None:
         ext = get_ext_all(hdul)
@@ -332,7 +337,8 @@ def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, avgpixel=False, Rayleigh=F
     except FileNotFoundError:
         print('Cal file does not exist, use v0...')
         xcal, C2R, C2Rtbl = get_cal()
-    ycal = np.arange(1024)
+    if ycal is None:
+        ycal = np.arange(1024)
     if wvlim is not None:
         xlim = get_xbin_lim(wvlim)
     if isinstance(ext, (int, np.integer)):

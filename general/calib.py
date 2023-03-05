@@ -1,6 +1,8 @@
 import numpy as np
+import os
+from pathlib import Path
 import astropy.io.fits as fits
-from .variables import dataloc, calloc
+from paths import dataloc, calloc
 
 def get_cal():
     '''
@@ -9,7 +11,8 @@ def get_cal():
     Use it only when daily calibration data is not published yet.
     Unit of C2Rtbl: Rayleigh/(cnts/min); (cnts/min)/pixel to Rayleigh/pixel
     '''
-    path = 'npy/caldata.npy'
+    parent = Path(__file__).resolve().parent
+    path = parent.joinpath('npy/caldata.npy')
     dic = np.load(path, allow_pickle=True).item()
     xcal = dic['xcal']
     C2R = dic['C2R']
