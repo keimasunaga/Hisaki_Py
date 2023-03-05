@@ -2,7 +2,12 @@ import numpy as np
 import os
 from pathlib import Path
 import astropy.io.fits as fits
-from paths import dataloc, calloc
+from .env import get_env
+
+# Hisaki data location
+dataloc = get_env('dataloc_hsk')
+# Hisaki calibration data location
+calloc = get_env('calloc_hsk')
 
 def get_cal():
     '''

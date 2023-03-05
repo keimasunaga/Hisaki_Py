@@ -4,9 +4,12 @@ import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
 
-from paths import dataloc
+from .env import get_env
 from .time import str2Dt
 from .calib import get_cal_daily, get_cal, get_xbin_lim
+
+# Hisaki data location
+dataloc = get_env('dataloc_hsk')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
