@@ -253,6 +253,10 @@ def get_ext_seorb(hdul, delta_thre=2500):
 def get_xslice(data, ylim, mean=False, include_err=False):
     '''
     get xslice of the 2D spectrum.
+    arg:
+        data: img data (1024 x 1024)
+        ylim: yrange where counts to be integrated (or averaged)
+    return: x (wv) profile (1024) integrated (averaged) over ylim
     '''
     if np.size(ylim) == 1:
         return data[ylim, :]
@@ -271,6 +275,10 @@ def get_xslice(data, ylim, mean=False, include_err=False):
 def get_yslice(data, xlim, mean=False, include_err=False):
     '''
     get yslice of the 2D spectrum.
+    arg:
+        data: img data (1024 x 1024)
+        xlim: xrange where counts to be integrated (or averaged)
+    return: y (spatial) profile (1024) integrated (averaged) over xlim
     '''
     if np.size(xlim) == 1:
         return data[:, xlim]
