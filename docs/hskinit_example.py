@@ -13,7 +13,7 @@ if path_hisaki_py not in sys.path:
 
 ## Add env paths
 import os
-envdic = {'dataloc_hsk’:'Path_to_Hisaki_data_directory',
+envdic = {'dataloc_hsk':'Path_to_Hisaki_data_directory',
           'calloc_hsk':'Path_to_caldata_directory'}
 for ikey in envdic.keys():
     os.environ[ikey] = envdic[ikey]
