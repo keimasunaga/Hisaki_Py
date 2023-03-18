@@ -1,4 +1,4 @@
-import glob
+import glob, os
 import numpy as np
 import astropy.io.fits as fits
 from datetime import timedelta
@@ -84,7 +84,7 @@ class HskData:
 
 def get_fname(target, date='*', mode='*', lv='02', vr='00', fullpath=False):
     pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
-    filepath = glob.glob(dataloc + '/' + pattern)
+    filepath = glob.glob(os.path.join(dataloc, pattern))
     if fullpath:
         if np.size(filepath) == 1:
             filepath = filepath[0]
@@ -93,9 +93,9 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00', fullpath=False):
         return filepath
     else:
         if np.size(filepath) == 1:
-            fname = filepath[0].split('/')[-1]
+            fname = os.path.split(filepath[0])[1]
         else:
-            fname = [ifname.split('/')[-1] for ifname in filepath]
+            fname = [os.path.split(ifname)[1] for ifname in filepath]
         if np.size(fname) == 0:
             print('---- No data found, returning an empty list ----')
         return fname
@@ -129,7 +129,7 @@ def fname2target_body(fname):
 
 def fitsopen(path):
     hdul = fits.open(path)
-    fname = path[0].split('/')[-1]
+    fname = os.path.split(path)[1] #path[0].split('/')[-1]
     print('---- Opened ' + fname + ' ----')
     print('---- Make sure that the fits data should be closed eventually. ----')
     return hdul
