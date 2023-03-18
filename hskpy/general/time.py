@@ -98,3 +98,21 @@ def unix2str(unix_time):
         str_time: a string time in the Hisaki string format or list or array of them
     '''
     return Dt2str(unix2Dt(unix_time))
+
+def get_timeDt_mean(timeDt):
+    if np.size(timeDt) > 1:
+        timeDt_mean = unix2Dt(sum(Dt2unix(timeDt))/len(timeDt))
+    elif np.size(timeDt) == 1:
+        if isinstance(timeDt, (list, np.ndarray)):
+            timeDt_mean = timeDt[0]
+        else:
+            timeDt_mean = timeDt
+    elif np.size(timeDt) == 0:
+        timeDt_mean = None
+    return timeDt_mean
+
+def interpDt(Dt_new, Dt, y):
+    utime_new = Dt2unix(Dt_new)
+    utime = Dt2unix(Dt)
+    y_new = np.interp(utime_new, utime, y)
+    return y_new
