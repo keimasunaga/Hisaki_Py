@@ -5,8 +5,10 @@ import glob, os
 from astropy.coordinates import Angle
 #from astropy import units as u
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 from ..general.env import get_env
+from ..general.time import interpDt
 
 class HorizonsData:
     def __init__(self, fname, path=None):
@@ -79,7 +81,9 @@ class PlanetView:
         self.date = date
         self.slit = slit
         self.timeDt = datetime.strptime(date, '%Y%m%d')
-        eph = HorizonsData(self.name+'_all_daily', data_loc=self.name)
+        parent = Path(__file__).resolve().parent
+        path = parent.joinpath('horizons_data')
+        eph = HorizonsData(self.name+'_all_daily.txt', path=path)
         eph.interpDt(self.timeDt)
         self.appdia = eph.appdia_intp
         if eph.sot_dir_intp >= 0:
@@ -115,9 +119,9 @@ class PlanetView:
                 ax.axhline(-30, linestyle='--', linewidth=1, color='skyblue')
 
 def plot_venus_from_earth(date, slit=None, ax=None, xlim=[-40, 40], ylim=[-40, 40]):
-    vv = PlanetView('venus', date, slit)
-    vv.plot(ax=ax, xlim=xlim, ylim=ylim)
+    pv = PlanetView('venus', date, slit)
+    pv.plot(ax=ax, xlim=xlim, ylim=ylim)
 
 def plot_mars_from_earth(date, slit=None, ax=None, xlim=[-15, 15], ylim=[-15, 15]):
-    vv = PlanetView('mars', date, slit)
-    vv.plot(ax=ax, xlim=xlim, ylim=ylim)
+    pv = PlanetView('mars', date, slit)
+    pv.plot(ax=ax, xlim=xlim, ylim=ylim)
