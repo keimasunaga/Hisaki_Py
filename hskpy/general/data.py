@@ -250,6 +250,52 @@ def get_ext_seorb(hdul, delta_thre=2500):
 
 
 
+def get_xslice(data, ylim, mean=False, include_err=False):
+    '''
+    get xslice of the 2D spectrum.
+    arg:
+        data: img data (1024 x 1024)
+        ylim: yrange where counts to be integrated (or averaged)
+    return: x (wv) profile (1024) integrated (averaged) over ylim
+    '''
+    if np.size(ylim) == 1:
+        return data[ylim, :]
+    else:
+        if mean:
+            if include_err:
+                return np.nanmean(data[ylim[0]:ylim[1], :], axis=0), np.sqrt(np.nansum(data[ylim[0]:ylim[1], :], axis=0))/len(range(ylim[0], ylim[1]))
+            else:
+                return np.nanmean(data[ylim[0]:ylim[1], :], axis=0)
+        else:
+            if include_err:
+                return np.nansum(data[ylim[0]:ylim[1], :], axis=0), np.sqrt(np.nansum(data[ylim[0]:ylim[1], :], axis=0))
+            else:
+                return np.nansum(data[ylim[0]:ylim[1], :], axis=0)
+
+def get_yslice(data, xlim, mean=False, include_err=False):
+    '''
+    get yslice of the 2D spectrum.
+    arg:
+        data: img data (1024 x 1024)
+        xlim: xrange where counts to be integrated (or averaged)
+    return: y (spatial) profile (1024) integrated (averaged) over xlim
+    '''
+    if np.size(xlim) == 1:
+        return data[:, xlim]
+    else:
+        if mean:
+            if include_err:
+                return np.nanmean(data[:, xlim[0]:xlim[1]], axis=1), np.sqrt(np.nansum(data[:, xlim[0]:xlim[1]], axis=1))/len(range(xlim[0], xlim[1]))
+            else:
+                return np.nanmean(data[:, xlim[0]:xlim[1]], axis=1)
+        else:
+            if include_err:
+                return np.nansum(data[:, xlim[0]:xlim[1]], axis=1), np.sqrt(np.nansum(data[:, xlim[0]:xlim[1]], axis=1))
+            else:
+                return np.nansum(data[:, xlim[0]:xlim[1]], axis=1)
+
+
+
 ########################
 ## plotting functions ##
 ########################
