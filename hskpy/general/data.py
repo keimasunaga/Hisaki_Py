@@ -84,7 +84,41 @@ class HskData:
         return get_calflg(self.hdul, ext, string)
 
     def get_gcbc(self, ext=None):
-        return get_gcbc(self.hdul, ext):
+        return get_gcbc(self.hdul, ext)
+
+    def get_submod(self, ext=None):
+        return get_submod(self.hdul, ext)
+
+    def get_submst(self, ext=None):
+        return get_submst(self.hdul, ext)
+
+    def get_sclt(self, ext=None):
+        return get_sclt(self.hdul, ext)
+
+    def get_sclt_pla(self, ext=None):
+        return get_sclt_pla(self.hdul, ext)
+
+    def get_sclon(self, ext=None):
+        return get_sclon(self.hdul, ext)
+
+    def get_sclat(self, ext=None):
+        return get_sclat(self.hdul, ext)
+
+    def get_dist_earth_sc(self, ext=None):
+        return get_dist_earth_sc(self.hdul, ext)
+
+    def get_dist_earth_sun(self, ext=None):
+        return get_dist_earth_sun(self.hdul, ext)
+
+    def get_dist_pla_sc(self, ext=None):
+        return get_dist_pla_sc(self.hdul, ext)
+
+    def get_dist_pla_sun(self, ext=None):
+        return get_dist_pla_sun(self.hdul, ext)
+
+    def get_slit_mode(self, ext=None):
+        return get_slit_mode(self.hdul, ext)
+
 
 def get_fname(target, date='*', mode='*', lv='02', vr='00', fullpath=False):
     pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
@@ -293,6 +327,51 @@ def get_gcbc(hdul, ext=None):
 
     return bc1x_2, bc1y_2, bc2x_2, bc2y_2
 
+
+def get_submod(hdul, ext=None):
+    submod = get_header_value(hdul, 'SUBMOD', ext)
+    return submod
+
+def get_submst(hdul, ext=None):
+    submst = get_header_value(hdul, 'SUBMST', ext)
+    return submst
+
+def get_sclt(hdul, ext=None):
+    ltesc = get_header_value(hdul, 'LTESC', ext)
+    return ltesc
+
+def get_sclt_pla(hdul, ext=None):
+    ltpsc = get_header_value(hdul, 'LTPSC', ext)
+    return ltpsc
+
+def get_sclon(hdul, ext=None):
+    sclon = get_header_value(hdul, 'SLONESC', ext)
+    return sclon
+
+def get_sclat(hdul, ext=None):
+    sclat = get_header_value(hdul, 'SLATESC', ext)
+    return sclat
+
+def get_dist_earth_sc(hdul, ext=None):
+    dist_esc = get_header_value(hdul, 'RADIESC', ext)
+    return dist_esc
+
+def get_dist_earth_sun(hdul, ext=None):
+    dist_esu = get_header_value(hdul, 'RADIESU', ext)
+    return dist_esu
+
+def get_dist_pla_sc(hdul, ext=None):
+    dist_psc = get_header_value(hdul, 'RADIPSC', ext)
+    return dist_psc
+
+def get_dist_pla_sun(hdul, ext=None):
+    dist_psu = get_header_value(hdul, 'RADIPSU', ext)
+    return dist_psu
+
+def get_slit_mode(hdul, ext=None):
+    slit_mode = get_header_value(hdul, 'SLITMODE', ext)
+    slit_mode = np.array([int(imod.split()[0]) for imod in slit_mode])
+    return slit_mode
 
 
 def get_xslice(data, ylim, mean=False, include_err=False):
