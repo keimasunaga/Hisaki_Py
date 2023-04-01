@@ -63,8 +63,8 @@ class HskData:
     def get_header(self, ext):
         return self.hdul[ext].header
 
-    def get_header_value(self, header_name, ext=None):
-        return get_header_value(self.hdul, header_name, ext)
+    def get_header_value(self, header_name, ext=None, fix=False):
+        return get_header_value(self.hdul, header_name, ext, fix=fix)
 
     def get_timeDt(self, ext=None):
         return get_timeDt(self.hdul, ext)
