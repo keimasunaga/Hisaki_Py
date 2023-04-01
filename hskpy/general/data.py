@@ -80,7 +80,11 @@ class HskData:
     def get_ext_seorb(self, delta_thre=2500):
         return get_ext_seorb(self.hdul, delta_thre)
 
+    def get_calflg(self, ext=None, string=True):
+        return get_calflg(self.hdul, ext, string)
 
+    def get_gcbc(self, ext=None):
+        return get_gcbc(self.hdul, ext):
 
 def get_fname(target, date='*', mode='*', lv='02', vr='00', fullpath=False):
     pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
@@ -247,6 +251,47 @@ def get_ext_seorb(hdul, delta_thre=2500):
         ext_e2 = np.append(ext_e, ext_all[-1])
 
         return ext_s2, ext_e2
+
+
+
+def get_calflg(hdul, ext=None, string=True):
+    '''
+    Get calflag data from headers at the selected extensions.
+    Note that this does NOT include those of the primary (ext=0) and total (ext=1) extensions.
+    arg:
+        hdul: open fits file
+        ext: extension (integer or list or 1d array)
+        string: If True, data is returned in string ("dis"/"ena") format, otherwise in float (1 or 0).
+                Note that "dis"/1  and "ena"/0 correspond to planet/sky observation, respectively.
+    return: one datetime or a list of them
+    '''
+    calflg = get_header_value(hdul, 'CALFLG', ext)
+    calflg_v = np.array([1 if iflg == 'dis' else 0 for iflg in calflg])
+    if string:
+        return calflg
+    else:
+        return calflg_v
+
+
+def get_gcbc(hdul, ext=None):
+    '''
+    Get guding camera's barycenter data from headers at the selected extensions.
+    Note that this does NOT include those of the primary (ext=0) and total (ext=1) extensions.
+    arg:
+        hdul: open fits file
+        ext: extension (integer or list or 1d array)
+    return: one datetime or a list of them
+    '''
+    bc1x = get_header_value(hdul, 'BC1XAVE', ext, fix=True)
+    bc1y = get_header_value(hdul, 'BC1YAVE', ext, fix=True)
+    bc2x = get_header_value(hdul, 'BC2XAVE', ext, fix=True)
+    bc2y = get_header_value(hdul, 'BC2YAVE', ext, fix=True)
+    bc1x_2 = np.array([float(ival) for ival in bc1x])
+    bc1y_2 = np.array([float(ival) for ival in bc1y])
+    bc2x_2 = np.array([float(ival) for ival in bc2x])
+    bc2y_2 = np.array([float(ival) for ival in bc2y])
+
+    return bc1x_2, bc1y_2, bc2x_2, bc2y_2
 
 
 
