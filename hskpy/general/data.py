@@ -297,7 +297,7 @@ def get_calflg(hdul, ext=None, string=True):
         ext: extension (integer or list or 1d array)
         string: If True, data is returned in string ("dis"/"ena") format, otherwise in float (1 or 0).
                 Note that "dis"/1  and "ena"/0 correspond to planet/sky observation, respectively.
-    return: one datetime or a list of them
+    return: Array of calflg data
     '''
     calflg = get_header_value(hdul, 'CALFLG', ext)
     calflg_v = np.array([1 if iflg == 'dis' else 0 for iflg in calflg])
@@ -314,7 +314,7 @@ def get_gcbc(hdul, ext=None):
     arg:
         hdul: open fits file
         ext: extension (integer or list or 1d array)
-    return: one datetime or a list of them
+    return: Tuple of gcbc arrays (bc1x, bc1y, bc2x, bc2y)
     '''
     bc1x = get_header_value(hdul, 'BC1XAVE', ext, fix=True)
     bc1y = get_header_value(hdul, 'BC1YAVE', ext, fix=True)
