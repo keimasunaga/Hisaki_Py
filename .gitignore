@@ -1,8 +1,9 @@
 __pycache__/
 paths.py
 .DS_Store
-*.ipynb
 .ipynb_checkpoints
+
+tests/
 
 .vscode/*
 !.vscode/settings.json
