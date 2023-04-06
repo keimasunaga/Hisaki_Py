@@ -3,6 +3,7 @@ import numpy as np
 import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
+import urllib.request
 
 from .env import get_env
 from .time import str2Dt
@@ -10,6 +11,7 @@ from .calib import get_cal_daily, get_cal, get_xbin_lim
 
 # Hisaki data location
 dataloc = get_env('dataloc_hsk')
+dataloc_l2p = get_env('l2pdataloc_hsk')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -120,9 +122,17 @@ class HskData:
         return get_slit_mode(self.hdul, ext)
 
 
-def get_fname(target, date='*', mode='*', lv='02', vr='00', fullpath=False):
-    pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
-    filepath = glob.glob(os.path.join(dataloc, pattern))
+def get_fname(target, date='*', mode='*', lv='02', vr='00',
+              lt='00-24', dt='00106',
+              fullpath=False):
+
+    if lv=='02':
+        pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
+        filepath = glob.glob(os.path.join(dataloc, pattern))
+    elif lv=='l2p':
+        pattern = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
+        filepath = glob.glob(os.path.join(dataloc_l2p, target, pattern))
+
     if fullpath:
         if np.size(filepath) == 1:
             filepath = filepath[0]
@@ -541,3 +551,64 @@ def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False,
         ax = fig.add_subplot(111)
     ax_out = ax.errorbar(ycal, yprof, yprof_err, **kwarg)
     return ax_out
+
+
+#############
+## L2prime ##
+#############
+def check_url(url):
+    '''Checks if the file in url exists in your local environment
+       args:
+        url: data file url
+       returns:
+        flag: bools
+    '''
+    flag = True
+    try:
+        f = urllib.request.urlopen(url)
+        print('OK:', url)
+        f.close()
+    except urllib.request.HTTPError:
+        print('Not found:', url)
+        flag = False
+    return flag
+
+def download_data_l2p(target, date, lt='00-24', dt='00106'):
+    fn = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
+    if target == 'jupiter':
+        url = 'http://octave.gp.tohoku.ac.jp/db/HISAKI/hisaki_l3/l2prime/' + date[0:4] + '/' + fn
+    dir = os.path.join(dataloc_l2p, target)
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        flag = check_url(url)
+        if flag:
+            print("File "+fn+" is downloading to the local computer.")
+            ret = urllib.request.urlretrieve(url, fn_full)
+        else:
+            print("No file "+fn+".")
+
+def get_xaxis(hdul, ext=1):
+    NAXIS1 = int(hdul[ext].header['NAXIS1'])
+    CRVAL1 = float(hdul[ext].header['CRVAL1'])
+    CRPIX1 = float(hdul[ext].header['CRPIX1'])
+    CDELT1 = float(hdul[ext].header['CDELT1'])
+    x_axis = CRVAL1 + (np.arange(NAXIS1) - CRPIX1) * CDELT1
+    return x_axis
+
+def get_yaxis(hdul, ext=1):
+    NAXIS2 = int(hdul[ext].header['NAXIS2'])
+    CRVAL2 = float(hdul[ext].header['CRVAL2'])
+    CDELT2 = float(hdul[ext].header['CDELT2'])
+    CRPIX2 = float(hdul[ext].header['CRPIX2'])
+    y_axis = CRVAL2 + (np.arange(NAXIS2) - CRPIX2) * CDELT2
+    return y_axis
+
+def get_labels(hdul, ext=1):
+    x_label = hdul[ext].header['CUNIT1']
+    y_label = hdul[ext].header['CUNIT2']
+    BUNITS = hdul[ext].header['BUNITS']
+    return x_label, y_label, BUNITS
