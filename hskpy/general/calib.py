@@ -4,10 +4,8 @@ from pathlib import Path
 import astropy.io.fits as fits
 from .env import get_env
 
-# Hisaki data location
-dataloc = get_env('dataloc_hsk')
 # Hisaki calibration data location
-calloc = get_env('calloc_hsk')
+calloc = get_env('hsk_cal_data_loc')
 
 def get_cal():
     '''

@@ -10,8 +10,8 @@ from .time import str2Dt
 from .calib import get_cal_daily, get_cal, get_xbin_lim
 
 # Hisaki data location
-dataloc = get_env('dataloc_hsk')
-dataloc_l2p = get_env('l2pdataloc_hsk')
+dataloc = get_env('hsk_l2_data_loc')
+dataloc_l2p = get_env('hsk_l2p_data_loc')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
