@@ -12,6 +12,7 @@ from .calib import get_cal_daily, get_cal, get_xbin_lim
 # Hisaki data location
 dataloc = get_env('hsk_l2_data_loc')
 dataloc_l2p = get_env('hsk_l2p_data_loc')
+url_l2p = get_env('hsk_l2p_data_url')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -576,7 +577,7 @@ def check_url(url):
 def download_data_l2p(target, date, lt='00-24', dt='00106'):
     fn = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
     if target == 'jupiter':
-        url = 'http://octave.gp.tohoku.ac.jp/db/HISAKI/hisaki_l3/l2prime/' + date[0:4] + '/' + fn
+        url = url_l2p + date[0:4] + '/' + fn
     dir = os.path.join(dataloc_l2p, target)
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
