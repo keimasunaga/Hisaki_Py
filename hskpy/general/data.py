@@ -472,8 +472,10 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
         mesh = ax.pcolormesh(xcal, ycal, img/ndat,  **kwarg)
     return mesh
 
-def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
-
+def plot_xprof(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, **kwarg):
+    '''
+    test
+    '''
     if ext is None:
         ext = get_ext_all(hdul)
     timeDt = get_timeDt(hdul)
@@ -491,28 +493,31 @@ def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=F
         ndat = np.size(ext)
     img = get_img(hdul, ext)
     img_err = np.sqrt(img)
-    if Rayleigh:
-        xprof = np.nansum(img[ylim[0]:ylim[1], :], axis=0)/ndat*C2R
-        xprof_err = np.sqrt(np.nansum(img_err[ylim[0]:ylim[1], :]**2, axis=0))/ndat*C2R
-    else:
-        xprof = np.nansum(img[ylim[0]:ylim[1], :], axis=0)/ndat
-        xprof_err = np.sqrt(np.nansum(img_err[ylim[0]:ylim[1], :]**2, axis=0))/ndat
 
-    if avgpixel:
+    xslice, xslice_err = get_xslice(img, ylim, include_err=True)
+    ny = ylim[1]-ylim[0]
+
+    if Rayleigh:
+        xprof = xslice/ndat/ny*C2R
+        xprof_err = xslice_err/ndat/ny*C2R
+        ylabel = 'Rayleigh/pix'
+    else:
+        xprof = xslice/ndat
+        xprof_err = xslice_err/ndat
+        ylabel = '#/min'
+    if ymean:
         xprof /= np.diff(ylim)
         xprof_err /= np.diff(ylim)
+        ylabel = '#/min/pix'
 
     #plot
     if ax is None:
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(111)
 
-    if wvlim is not None:
-        xlim = get_xbin_lim(wvlim)
-        ymax = np.max(xprof[xlim[0]:xlim[1]])
-        ax.set_ylim(top=ymax*1.1)
-
     ax_out = ax.errorbar(xcal, xprof, xprof_err, **kwarg)
+    ax.set_xlabel('wavelength [Å]')
+    ax.set_ylabel(ylabel)
 
     return ax_out
 
