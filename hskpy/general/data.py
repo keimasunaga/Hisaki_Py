@@ -574,11 +574,13 @@ def check_url(url):
         flag = False
     return flag
 
-def download_data_l2p(target, date, lt='00-24', dt='00106'):
-    fn = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
+def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00'):
+    fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+    yr = date[0:4]
+    #url = url_l2p + target + '/' + yr + '/' + fn
     if target == 'jupiter':
-        url = url_l2p + date[0:4] + '/' + fn
-    dir = os.path.join(dataloc_l2p, target)
+        url = url_l2p + yr + '/' + fn
+    dir = os.path.join(dataloc_l2p, target, yr)
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
     is_file = os.path.isfile(fn_full)
