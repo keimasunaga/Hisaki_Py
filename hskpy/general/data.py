@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import urllib.request
 
 from .env import get_env
-from .time import str2Dt
+from .time import str2Dt, get_timeDt_mean
 from .calib import get_cal_daily, get_cal, get_xbin_lim
 
 # Hisaki data location
@@ -265,16 +265,20 @@ def get_timeDt(hdul, ext=None):
     '''
     if ext is None:
         n_ext = hdul[0].header['NEXTEND']
-        timeDt = np.array([str2Dt(hdul[i].header['DATE-OBS']) + timedelta(seconds=30) for i in range(ext_offset, n_ext)])
+        timeDt = np.array([get_timeDt_mean( [ str2Dt(hdul[i].header['DATE-OBS']), str2Dt(hdul[i].header['DATE-END']) ] ) for i in range(ext_offset, n_ext)])
 
     else:
         if np.size(ext) == 1:
             if type(ext) is int:
-                timeDt = str2Dt(hdul[ext].header['DATE-OBS']) + timedelta(seconds=30)
+                sDt = str2Dt(hdul[ext].header['DATE-OBS'])
+                eDt = str2Dt(hdul[ext].header['DATE-END'])
+                timeDt = get_timeDt_mean([sDt,eDt])
             else:
-                timeDt = str2Dt(hdul[ext[0]].header['DATE-OBS']) + timedelta(seconds=30)
+                sDt = str2Dt(hdul[ext[0]].header['DATE-OBS'])
+                eDt = str2Dt(hdul[ext[0]].header['DATE-END'])
+                timeDt = get_timeDt_mean([sDt,eDt])
         else:
-            timeDt = np.array([str2Dt(hdul[i].header['DATE-OBS']) + timedelta(seconds=30) for i in ext])
+            timeDt = np.array([get_timeDt_mean( [str2Dt(hdul[i].header['DATE-OBS']), str2Dt(hdul[i].header['DATE-END'])] ) for i in ext])
 
     return timeDt
 
