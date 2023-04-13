@@ -475,7 +475,7 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
         mesh = ax.pcolormesh(xcal, ycal, img/ndat,  **kwarg)
     return mesh
 
-def plot_xprof(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, **kwarg):
+def plot_xslice(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, **kwarg):
     '''
     test
     '''
@@ -524,7 +524,7 @@ def plot_xprof(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, 
 
     return ax_out
 
-def plot_yprof(hdul, ext=None, wvlim=None, xlim=None, xmean=False,
+def plot_yslice(hdul, ext=None, wvlim=None, xlim=None, xmean=False,
                Rayleigh=False, ycal=None, ycal_label='pixel', ax=None, **kwarg):
 
     if ext is None:
