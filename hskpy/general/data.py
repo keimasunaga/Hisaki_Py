@@ -385,7 +385,10 @@ def get_dist_pla_sun(hdul, ext=None):
 
 def get_slit_mode(hdul, ext=None):
     slit_mode = get_header_value(hdul, 'SLITMODE', ext)
-    slit_mode = np.array([int(imod.split()[0]) for imod in slit_mode])
+    if isinstance(slit_mode, str):
+        slit_mode = int(slit_mode.split()[0])
+    else:
+        slit_mode = np.array([int(imod.split()[0]) for imod in slit_mode])
     return slit_mode
 
 
@@ -521,7 +524,8 @@ def plot_xprof(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, 
 
     return ax_out
 
-def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+def plot_yprof(hdul, ext=None, wvlim=None, xlim=None, xmean=False,
+               Rayleigh=False, ycal=None, ycal_label='pixel', ax=None, **kwarg):
 
     if ext is None:
         ext = get_ext_all(hdul)
@@ -543,23 +547,33 @@ def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False,
         ndat = np.size(ext)
     img = get_img(hdul, ext)
     img_err = np.sqrt(img)
+
+    yslice, yslice_err = get_yslice(img, xlim, include_err=True)
+    slit_mode = get_slit_mode(hdul, 2)
+    nx_slit = slit_mode/10
+
     if Rayleigh:
         C2Ravg = np.mean(C2R[xlim[0]:xlim[1]])
-        yprof = np.nansum(img[:, xlim[0]:xlim[1]], axis=1)/ndat*C2Ravg
-        yprof_err = np.sqrt(np.nansum(img_err[:, xlim[0]:xlim[1]]**2, axis=1))/ndat*C2Ravg
+        yprof = yslice/ndat/nx_slit*C2Ravg
+        yprof_err = yslice_err/ndat/nx_slit*C2Ravg
+        ylabel = 'Rayleigh/pix'
     else:
-        yprof = np.nansum(img[:, xlim[0]:xlim[1]], axis=1)/ndat
-        yprof_err = np.sqrt(np.nansum(img_err[:, xlim[0]:xlim[1]]**2, axis=1))/ndat
-
-    if avgpixel:
-        yprof /= np.diff(xlim)
-        yprof_err /= np.diff(xlim)
+        yprof = yslice/ndat
+        yprof_err = yslice_err/ndat
+        ylabel = '#/min'
+        if xmean:
+            yprof /= nx_slit
+            yprof_err /= nx_slit
+            ylabel = '#/min/pix'
 
     #plot
     if ax is None:
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(111)
+
     ax_out = ax.errorbar(ycal, yprof, yprof_err, **kwarg)
+    ax.set_xlabel(ycal_label)
+    ax.set_ylabel(ylabel)
     return ax_out
 
 
