@@ -577,6 +577,100 @@ def plot_yslice(hdul, ext=None, wvlim=None, xlim=None, xmean=False,
     return ax_out
 
 
+
+def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+    '''
+    This function is replaced with plot_xlsice() and will be obsoleted.
+    '''
+    if ext is None:
+        ext = get_ext_all(hdul)
+    timeDt = get_timeDt(hdul)
+    Dt_mid = timeDt[int(np.size(timeDt)/2)]
+    date = str(Dt_mid.year).zfill(4) + str(Dt_mid.month).zfill(2) + str(Dt_mid.day).zfill(2)
+    try:
+        xcal, C2R, C2Rtbl = get_cal_daily(date)
+    except FileNotFoundError:
+        print('Cal file does not exist, use v0...')
+        xcal, C2R, C2Rtbl = get_cal()
+    ycal = np.arange(1024)
+    if isinstance(ext, (int, np.integer)):
+        ndat = get_nextend(hdul)
+    else:
+        ndat = np.size(ext)
+    img = get_img(hdul, ext)
+    img_err = np.sqrt(img)
+    if Rayleigh:
+        xprof = np.nansum(img[ylim[0]:ylim[1], :], axis=0)/ndat*C2R
+        xprof_err = np.sqrt(np.nansum(img_err[ylim[0]:ylim[1], :]**2, axis=0))/ndat*C2R
+    else:
+        xprof = np.nansum(img[ylim[0]:ylim[1], :], axis=0)/ndat
+        xprof_err = np.sqrt(np.nansum(img_err[ylim[0]:ylim[1], :]**2, axis=0))/ndat
+
+    if avgpixel:
+        xprof /= np.diff(ylim)
+        xprof_err /= np.diff(ylim)
+
+    #plot
+    if ax is None:
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+    if wvlim is not None:
+        xlim = get_xbin_lim(wvlim)
+        ymax = np.max(xprof[xlim[0]:xlim[1]])
+        ax.set_ylim(top=ymax*1.1)
+
+    ax_out = ax.errorbar(xcal, xprof, xprof_err, **kwarg)
+
+    return ax_out
+
+def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+    '''
+    This function is replaced with plot_ylsice() and will be obsoleted.
+    '''
+    if ext is None:
+        ext = get_ext_all(hdul)
+    timeDt = get_timeDt(hdul)
+    Dt_mid = timeDt[int(np.size(timeDt)/2)]
+    date = str(Dt_mid.year).zfill(4) + str(Dt_mid.month).zfill(2) + str(Dt_mid.day).zfill(2)
+    try:
+        xcal, C2R, C2Rtbl = get_cal_daily(date)
+    except FileNotFoundError:
+        print('Cal file does not exist, use v0...')
+        xcal, C2R, C2Rtbl = get_cal()
+    if ycal is None:
+        ycal = np.arange(1024)
+    if wvlim is not None:
+        xlim = get_xbin_lim(wvlim)
+    if isinstance(ext, (int, np.integer)):
+        ndat = get_nextend(hdul)
+    else:
+        ndat = np.size(ext)
+    img = get_img(hdul, ext)
+    img_err = np.sqrt(img)
+    if Rayleigh:
+        C2Ravg = np.mean(C2R[xlim[0]:xlim[1]])
+        yprof = np.nansum(img[:, xlim[0]:xlim[1]], axis=1)/ndat*C2Ravg
+        yprof_err = np.sqrt(np.nansum(img_err[:, xlim[0]:xlim[1]]**2, axis=1))/ndat*C2Ravg
+    else:
+        yprof = np.nansum(img[:, xlim[0]:xlim[1]], axis=1)/ndat
+        yprof_err = np.sqrt(np.nansum(img_err[:, xlim[0]:xlim[1]]**2, axis=1))/ndat
+
+    if avgpixel:
+        yprof /= np.diff(xlim)
+        yprof_err /= np.diff(xlim)
+
+    #plot
+    if ax is None:
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+    ax_out = ax.errorbar(ycal, yprof, yprof_err, **kwarg)
+    return ax_out
+
+
+
+
+
 #############
 ## L2prime ##
 #############
