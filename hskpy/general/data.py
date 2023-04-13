@@ -508,10 +508,10 @@ def plot_xprof(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, 
         xprof = xslice/ndat
         xprof_err = xslice_err/ndat
         ylabel = '#/min'
-    if ymean:
-        xprof /= np.diff(ylim)
-        xprof_err /= np.diff(ylim)
-        ylabel = '#/min/pix'
+        if ymean:
+            xprof /= np.diff(ylim)
+            xprof_err /= np.diff(ylim)
+            ylabel = '#/min/pix'
 
     #plot
     if ax is None:
