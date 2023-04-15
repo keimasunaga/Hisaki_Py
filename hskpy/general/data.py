@@ -131,9 +131,9 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
         pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
         filepath = glob.glob(os.path.join(dataloc, pattern))
     elif lv=='l2p':
-        pattern = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
-        filepath = glob.glob(os.path.join(dataloc_l2p, target, pattern))
-
+        pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+        filepath = glob.glob(os.path.join(dataloc_l2p, target, date[0:4], pattern))
+        
     if fullpath:
         if np.size(filepath) == 1:
             filepath = filepath[0]
