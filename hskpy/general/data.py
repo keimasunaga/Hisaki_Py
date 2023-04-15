@@ -689,9 +689,7 @@ def check_url(url):
 def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00'):
     fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
     yr = date[0:4]
-    #url = url_l2p + target + '/' + yr + '/' + fn
-    if target == 'jupiter':
-        url = url_l2p + yr + '/' + fn
+    url = url_l2p + target + '/' + yr + '/' + fn
     dir = os.path.join(dataloc_l2p, target, yr)
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
