@@ -57,8 +57,7 @@ class HskData:
         return self.nextend
 
     def get_ext_all(self):
-        self.get_nextend()
-        return list(range(self.ext_offset, self.nextend))
+        return get_ext_all(self.hdul)
 
     def get_img(self, ext=1):
         return get_img(self.hdul, ext)
@@ -133,7 +132,7 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
     elif lv=='l2p':
         pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
         filepath = glob.glob(os.path.join(dataloc_l2p, target, date[0:4], pattern))
-        
+
     if fullpath:
         if np.size(filepath) == 1:
             filepath = filepath[0]
@@ -193,7 +192,7 @@ def get_nextend(hdul):
 
 def get_ext_all(hdul):
     nextend = get_nextend(hdul)
-    return list(range(ext_offset, nextend))
+    return list(range(ext_offset, nextend+1))
 
 def get_img(hdul, ext=1):
     '''
@@ -232,8 +231,8 @@ def get_header_value(hdul, header_name, ext=None, fix=False):
         if fix == True:
                 hdul.verify('fix')
         if ext is None:
-            n_ext = hdul[0].header['NEXTEND']
-            hdvalue = np.array([hdul[i].header[header_name] for i in range(ext_offset, n_ext)])
+            ext_all = get_ext_all(hdul)
+            hdvalue = np.array([hdul[i].header[header_name] for i in ext_all])
         else:
             if np.size(ext) == 1:
                 hdvalue = hdul[ext].header[header_name]
@@ -244,8 +243,8 @@ def get_header_value(hdul, header_name, ext=None, fix=False):
         if fix == True:
                 hdul.verify('fix')
         if ext is None:
-            n_ext = hdul[0].header['NEXTEND']
-            [[hdvalue.update({j: np.array([hdul[i].header[j] for i in range(ext_offset, n_ext)])})] for j in header_name]
+            ext_all = get_ext_all(hdul)
+            [[hdvalue.update({j: np.array([hdul[i].header[j] for i in ext_all])})] for j in header_name]
         else:
             if np.size(ext) == 1:
                 [hdvalue.update({j: hdul[ext].header[j]}) for j in header_name]
@@ -264,8 +263,8 @@ def get_timeDt(hdul, ext=None):
     return: one datetime or a list of them
     '''
     if ext is None:
-        n_ext = hdul[0].header['NEXTEND']
-        timeDt = np.array([get_timeDt_mean( [ str2Dt(hdul[i].header['DATE-OBS']), str2Dt(hdul[i].header['DATE-END']) ] ) for i in range(ext_offset, n_ext)])
+        ext_all = get_ext_all(hdul)
+        timeDt = np.array([get_timeDt_mean( [ str2Dt(hdul[i].header['DATE-OBS']), str2Dt(hdul[i].header['DATE-END']) ] ) for i in ext_all])
 
     else:
         if np.size(ext) == 1:
@@ -282,24 +281,20 @@ def get_timeDt(hdul, ext=None):
 
     return timeDt
 
-def get_ext_seorb(hdul, delta_thre=2500):
+def get_ext_seorb(hdul, delta_thre=60):
 
     timeDt = get_timeDt(hdul)
-    ext_offset = 2
-    n_ext = np.size(timeDt)
-    ext_all = list(range(ext_offset, ext_offset+n_ext))
+    ext_all = get_ext_all(hdul)
     if len(ext_all) == 0:
         return None, None
     else:
-        delta = timeDt[1:-1] - timeDt[0:-2]
+        delta = timeDt[1:] - timeDt[0:-1]
         sec_arr = np.array([idelta.seconds for idelta in delta])
         idx = np.where(sec_arr > delta_thre)[0]
         ext_e = idx + ext_offset
         ext_s = ext_e + 1
-        ext_s2 = np.append(ext_all[0], ext_s)
-        ext_e2 = np.append(ext_e, ext_all[-1])
 
-        return ext_s2, ext_e2
+        return ext_s, ext_e
 
 
 
