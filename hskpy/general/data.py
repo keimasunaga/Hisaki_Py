@@ -441,7 +441,11 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
 
     if ext is None:
         ext = get_ext_all(hdul)
+
+    img = get_img(hdul, ext)
+    ndat = np.size(ext)
     timeDt = get_timeDt(hdul, ext)
+
     if np.size(timeDt)>1:
         Dt_mid = timeDt[int(np.size(timeDt)/2)]
     else:
@@ -453,11 +457,6 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
         print('Cal file does not exist, use v0...')
         xcal, C2R, C2Rtbl = get_cal()
     ycal = np.arange(1024) ## make ycal a keyword later
-    if isinstance(ext, (int, np.integer)):
-        ndat = get_nextend(hdul)
-    else:
-        ndat = np.size(ext)
-    img = get_img(hdul, ext)
 
     #plot
     if ax is None:
