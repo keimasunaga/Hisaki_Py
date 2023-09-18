@@ -79,8 +79,8 @@ class HskData:
             self.xcal, self.C2R, self.C2Rtbl = get_cal()
             return self.xcal, self.C2R, self.C2Rtbl
 
-    def get_ext_seorb(self, delta_thre=2500):
-        return get_ext_seorb(self.hdul, delta_thre)
+    def get_ext_seorb(self, delta_thre=2500, add_first_and_last_exts=False):
+        return get_ext_seorb(self.hdul, delta_thre, add_first_and_last_exts)
 
     def get_calflg(self, ext=None, string=True):
         return get_calflg(self.hdul, ext, string)
@@ -281,7 +281,7 @@ def get_timeDt(hdul, ext=None):
 
     return timeDt
 
-def get_ext_seorb(hdul, delta_thre=60):
+def get_ext_seorb(hdul, delta_thre=60, add_first_and_last_exts=False):
 
     timeDt = get_timeDt(hdul)
     ext_all = get_ext_all(hdul)
@@ -294,6 +294,10 @@ def get_ext_seorb(hdul, delta_thre=60):
         ext_e = idx + ext_offset
         ext_s = ext_e + 1
 
+        if add_first_and_last_exts:
+            ext_s = np.sort(np.append(ext_s, ext_all[0]))
+            ext_e = np.append(ext_e, ext_all[-1])
+        
         return ext_s, ext_e
 
 
