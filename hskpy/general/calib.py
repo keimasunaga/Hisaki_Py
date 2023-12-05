@@ -33,7 +33,7 @@ def get_cal_daily(date):
     Unit of C2Rtbl: Rayleigh/(cnts/min); (cnts/min)/pixel to Rayleigh/pixel
     '''
 
-    fname_cal = 'calib_' + date + '_v1.0.fits' #'calib_v1.0.fits'
+    fname_cal = 'calib_' + date + '_v1.0.fits'
     path_cal = calloc + fname_cal
     with fits.open(path_cal) as hdul_cal:
         xcal = hdul_cal[1].data[550]  ## 550 is just a random y bin because the cal data has no dependence in the y direction
