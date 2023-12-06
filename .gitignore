@@ -1,0 +1,19 @@
+__pycache__/
+paths.py
+.DS_Store
+.ipynb_checkpoints
+
+tests/
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
