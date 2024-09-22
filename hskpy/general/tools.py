@@ -2,6 +2,14 @@ import numpy as np
 
 from .data import get_xslice, get_yslice
 
+def get_adjust_factor(img1, nimg1, img2, nimg2, xlim, ylim):
+    c_on = np.sum(img1[ylim[0]:ylim[1], xlim[0]:xlim[1]])/nimg1
+    c_on_err = np.sqrt(c_on)/nimg1
+    c_bg = np.sum(img2[ylim[0]:ylim[1], xlim[0]:xlim[1]])/nimg2
+    c_bg_err = np.sqrt(c_bg)/nimg2
+    f = c_on/c_bg
+    f_err = np.sqrt((c_on_err/c_bg)**2 + (c_on*c_bg_err/c_bg**2)**2)
+    return f, f_err
 
 def get_calculated_data(img, ndat, img_sky, ndat_sky, xlim, ylim, ylim_adj=None):
 
