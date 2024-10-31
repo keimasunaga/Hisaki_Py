@@ -52,9 +52,8 @@ class HskData:
         self.hdul.close()
         print('---- The fits data closed. ----')
 
-    def get_nextend(self):
-        self.nextend = self.hdul[ext_primary].header['NEXTEND']
-        return self.nextend
+    def get_nextend(self, exclude_offset=False):
+        return get_nextend(self.hdul, exclude_offset)
 
     def get_ext_all(self):
         return get_ext_all(self.hdul)
@@ -186,7 +185,7 @@ def fitsclose(hdul):
     hdul.close()
     print('---- The fits data closed. ----')
 
-def get_nextend(hdul):
+def get_nextend(hdul, exclude_offset=False):
     '''
     returns NEXTEND read by the primary data (ext=0).
     Note that NEXTEND does NOT count the extension of the primary data but DOES count the total data.
@@ -195,6 +194,8 @@ def get_nextend(hdul):
     Therefore, when you want to read each header data expect for primary and total extensions, you have to read from ext=2 to n_ext. (i.e., list(range(2, n_ext+1)) )
     '''
     nextend = hdul[ext_primary].header['NEXTEND']
+    if exclude_offset:
+        nextend = nextend - 1
     return nextend
 
 def get_ext_all(hdul):
