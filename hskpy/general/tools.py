@@ -11,7 +11,7 @@ def get_adjust_factor(img1, nimg1, img2, nimg2, xlim, ylim):
     f_err = np.sqrt((c_on_err/c_bg)**2 + (c_on*c_bg_err/c_bg**2)**2)
     return f, f_err
 
-def get_calculated_data(img, ndat, img_sky, ndat_sky, xlim, ylim, ylim_adj=None):
+def get_img_stats(img, ndat, img_sky, ndat_sky, xlim, ylim, ylim_adj=None):
 
     if ylim_adj is not None:
         f_adj, f_err =  get_adjust_factor(img, ndat, img_sky, ndat_sky, xlim, ylim_adj)
