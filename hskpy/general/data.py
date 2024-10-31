@@ -187,10 +187,20 @@ def fitsclose(hdul):
     print('---- The fits data closed. ----')
 
 def get_nextend(hdul):
+    '''
+    returns NEXTEND read by the primary data (ext=0).
+    Note that NEXTEND does NOT count the extension of the primary data but DOES count the total data.
+    When NEXTEND=n_ext, this means that fits have n_ext of spectrum data (total spectrum and each exposure spectrum) in addition to the primary data.
+    Extensions thus consist of 0 (primary), 1 (total), 2, ..., n_ext.
+    Therefore, when you want to read each header data expect for primary and total extensions, you have to read from ext=2 to n_ext. (i.e., list(range(2, n_ext+1)) )
+    '''
     nextend = hdul[ext_primary].header['NEXTEND']
     return nextend
 
 def get_ext_all(hdul):
+    '''
+    Returns each extension expect for primary and total., i.e., n_ext starting from 2 to n_ext+1.
+    '''
     nextend = get_nextend(hdul)
     return list(range(ext_offset, nextend+1))
 
@@ -297,7 +307,7 @@ def get_ext_seorb(hdul, delta_thre=60, add_first_and_last_exts=False):
         if add_first_and_last_exts:
             ext_s = np.sort(np.append(ext_s, ext_all[0]))
             ext_e = np.append(ext_e, ext_all[-1])
-        
+
         return ext_s, ext_e
 
 
