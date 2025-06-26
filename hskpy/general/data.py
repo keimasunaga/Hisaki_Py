@@ -700,6 +700,25 @@ def check_url(url):
         flag = False
     return flag
 
+def download_data_l2_pub(target, date, mode='*', lv='02', vr='00'):
+    fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
+    yr = date[0:4]
+    url = url_l2_pub + fn
+    #dir = os.path.join(dataloc, target, yr)
+    dir = dataloc
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        flag = check_url(url)
+        if flag:
+            print("File "+fn+" is downloading to the local computer.")
+            ret = urllib.request.urlretrieve(url, fn_full)
+        else:
+            print("No file "+fn+".")
+
 def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00'):
     fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
     yr = date[0:4]
