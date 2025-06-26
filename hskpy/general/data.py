@@ -446,7 +446,27 @@ def get_yslice(data, xlim, mean=False, include_err=False):
             else:
                 return np.nansum(data[:, xlim[0]:xlim[1]], axis=1)
 
+def get_total_count(data, xaxis, yaxis, xlim, ylim):
+    '''
+    get total count in region of interest (xlim x ylim).
+    arg:
+        data: img data (1024 x 1024)
+        xaxis: values of x-axis (angstrom) (1024)
+        yaxis: values of y-axis (arcsec)   (1024)
+        xlim: xrange where counts to be integrated
+        ylim: yrange where counts to be integrated
+    return: total count integrated over xlim x ylim
+    '''
+    idx_x1 = np.abs(xaxis - xlim[0]).argmin()
+    idx_x2 = np.abs(xaxis - xlim[1]).argmin()
+    if idx_x1 > idx_x2:
+        idx_x1, idx_x2 = idx_x2, idx_x1
+    idx_y1 = np.abs(yaxis - ylim[0]).argmin()
+    idx_y2 = np.abs(yaxis - ylim[1]).argmin()
+    if idx_y1 > idx_y2:
+        idx_y1, idx_y2 = idx_y2, idx_y1
 
+    return np.nansum(data[idx_y1:idx_y2, idx_x1:idx_x2])
 
 ########################
 ## plotting functions ##
