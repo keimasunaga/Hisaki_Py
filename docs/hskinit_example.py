@@ -20,7 +20,7 @@ envdic = {'hsk_l2_data_loc':'Path_to_l2_data_directory',
 
           'hsk_l2_data_url_pub': 'https://data.darts.isas.jaxa.jp/pub/hisaki/euv/',
           'hsk_l2_data_url': 'URL_of_l2_data (team-only site)',
-          'hsk_l2p_data_url':'URL_of_l2p_data'}
+          'hsk_l2p_data_url':'http://octave.gp.tohoku.ac.jp/db/HISAKI/l2prime/'}
 
 for ikey in envdic.keys():
     os.environ[ikey] = envdic[ikey]
