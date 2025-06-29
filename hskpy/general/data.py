@@ -13,6 +13,8 @@ from .calib import get_cal_daily, get_cal, get_xbin_lim
 dataloc = get_env('hsk_l2_data_loc')
 dataloc_l2p = get_env('hsk_l2p_data_loc')
 url_l2p = get_env('hsk_l2p_data_url')
+url_l2  = get_env('hsk_l2_data_url')
+url_l2_pub  = get_env('hsk_l2_data_url_pub')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -122,15 +124,19 @@ class HskData:
 
 
 def get_fname(target, date='*', mode='*', lv='02', vr='00',
-              lt='00-24', dt='00106',
+              lt='00-24', dt='00106', sky=False, # for level-2 prime data
               fullpath=False):
 
     if lv=='02':
         pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
         filepath = glob.glob(os.path.join(dataloc, pattern))
     elif lv=='l2p':
-        pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
-        filepath = glob.glob(os.path.join(dataloc_l2p, target, date[0:4], pattern))
+        if sky==False:
+            pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+            filepath = glob.glob(os.path.join(dataloc_l2p, target, target, date[0:4], pattern))
+        else:
+            pattern = 'exeuv_sky_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+            filepath = glob.glob(os.path.join(dataloc_l2p, target, 'sky', date[0:4], pattern))
 
     if fullpath:
         if np.size(filepath) == 1:
@@ -146,7 +152,7 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
         if np.size(fname) == 0:
             print('---- No data found, returning an empty list ----')
         return fname
-
+    
 def fname2date(fname):
     if type(fname) is str:
         name_splt = fname.split('.')
@@ -739,11 +745,16 @@ def download_data_l2_pub(target, date, mode='*', lv='02', vr='00'):
         else:
             print("No file "+fn+".")
 
-def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00'):
-    fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00', sky=False):
     yr = date[0:4]
-    url = url_l2p + target + '/' + yr + '/' + fn
-    dir = os.path.join(dataloc_l2p, target, yr)
+    if sky==False:
+        fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+        url = url_l2p + target + '/' + target + '/' + yr + '/' + fn
+        dir = os.path.join(dataloc_l2p, target, target, yr)
+    else:
+        fn = 'exeuv_sky_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+        url = url_l2p + target + '/sky/' + yr + '/' + fn
+        dir = os.path.join(dataloc_l2p, target, 'sky', yr)
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
     is_file = os.path.isfile(fn_full)
