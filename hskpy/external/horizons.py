@@ -19,7 +19,7 @@ class HorizonsData:
 
         self.fname = fname
         if path is None:
-            self.fpath = os.path.join(get_env('horizonsloc_hsk'), self.fname)
+            self.fpath = os.path.join(get_env('hsk_horizons_data_loc'), self.fname)
         else:
             self.fpath = os.path.join(path, self.fname)
         self._find_seline()
