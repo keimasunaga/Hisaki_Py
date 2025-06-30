@@ -11,10 +11,6 @@ A python code to analyze Hisaki data.
 ## Developer
 Kei Masunaga (keimasunaga@gmail.com)
 
-!## How to contribute
-!If you want to contribute code, you can fork the repo and clone it from your repository. Otherwise you can directly clone it.
-!Even if you do not plan to contribute code, raising issues of bugs, unexpected behavior, and suggestions for improvement would all be valuable.
-
 ## How to Contribute (via Fork and Pull Request)
 
 1. Fork this repository to your own GitHub account by clicking the "Fork" button on the top right of the repository page.
