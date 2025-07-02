@@ -13,6 +13,8 @@ from .calib import get_cal_daily, get_cal, get_xbin_lim
 dataloc = get_env('hsk_l2_data_loc')
 dataloc_l2p = get_env('hsk_l2p_data_loc')
 url_l2p = get_env('hsk_l2p_data_url')
+url_l2  = get_env('hsk_l2_data_url')
+url_l2_pub  = get_env('hsk_l2_data_url_pub')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -52,9 +54,8 @@ class HskData:
         self.hdul.close()
         print('---- The fits data closed. ----')
 
-    def get_nextend(self):
-        self.nextend = self.hdul[ext_primary].header['NEXTEND']
-        return self.nextend
+    def get_nextend(self, exclude_offset=False):
+        return get_nextend(self.hdul, exclude_offset)
 
     def get_ext_all(self):
         return get_ext_all(self.hdul)
@@ -123,15 +124,19 @@ class HskData:
 
 
 def get_fname(target, date='*', mode='*', lv='02', vr='00',
-              lt='00-24', dt='00106',
+              lt='00-24', dt='00106', sky=False, # for level-2 prime data
               fullpath=False):
 
     if lv=='02':
         pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
         filepath = glob.glob(os.path.join(dataloc, pattern))
     elif lv=='l2p':
-        pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
-        filepath = glob.glob(os.path.join(dataloc_l2p, target, date[0:4], pattern))
+        if sky==False:
+            pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+            filepath = glob.glob(os.path.join(dataloc_l2p, target, target, date[0:4], pattern))
+        else:
+            pattern = 'exeuv_sky_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+            filepath = glob.glob(os.path.join(dataloc_l2p, target, 'sky', date[0:4], pattern))
 
     if fullpath:
         if np.size(filepath) == 1:
@@ -147,7 +152,7 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
         if np.size(fname) == 0:
             print('---- No data found, returning an empty list ----')
         return fname
-
+    
 def fname2date(fname):
     if type(fname) is str:
         name_splt = fname.split('.')
@@ -186,11 +191,23 @@ def fitsclose(hdul):
     hdul.close()
     print('---- The fits data closed. ----')
 
-def get_nextend(hdul):
+def get_nextend(hdul, exclude_offset=False):
+    '''
+    returns NEXTEND read by the primary data (ext=0).
+    Note that NEXTEND does NOT count the extension of the primary data but DOES count the total data.
+    When NEXTEND=n_ext, this means that fits have n_ext of spectrum data (total spectrum and each exposure spectrum) in addition to the primary data.
+    Extensions thus consist of 0 (primary), 1 (total), 2, ..., n_ext.
+    Therefore, when you want to read each header data expect for primary and total extensions, you have to read from ext=2 to n_ext. (i.e., list(range(2, n_ext+1)) )
+    '''
     nextend = hdul[ext_primary].header['NEXTEND']
+    if exclude_offset:
+        nextend = nextend - 1
     return nextend
 
 def get_ext_all(hdul):
+    '''
+    Returns each extension expect for primary and total., i.e., n_ext starting from 2 to n_ext+1.
+    '''
     nextend = get_nextend(hdul)
     return list(range(ext_offset, nextend+1))
 
@@ -297,7 +314,7 @@ def get_ext_seorb(hdul, delta_thre=60, add_first_and_last_exts=False):
         if add_first_and_last_exts:
             ext_s = np.sort(np.append(ext_s, ext_all[0]))
             ext_e = np.append(ext_e, ext_all[-1])
-        
+
         return ext_s, ext_e
 
 
@@ -435,7 +452,27 @@ def get_yslice(data, xlim, mean=False, include_err=False):
             else:
                 return np.nansum(data[:, xlim[0]:xlim[1]], axis=1)
 
+def get_total_count(data, xaxis, yaxis, xlim, ylim):
+    '''
+    get total count in region of interest (xlim x ylim).
+    arg:
+        data: img data (1024 x 1024)
+        xaxis: values of x-axis (angstrom) (1024)
+        yaxis: values of y-axis (arcsec)   (1024)
+        xlim: xrange where counts to be integrated
+        ylim: yrange where counts to be integrated
+    return: total count integrated over xlim x ylim
+    '''
+    idx_x1 = np.abs(xaxis - xlim[0]).argmin()
+    idx_x2 = np.abs(xaxis - xlim[1]).argmin()
+    if idx_x1 > idx_x2:
+        idx_x1, idx_x2 = idx_x2, idx_x1
+    idx_y1 = np.abs(yaxis - ylim[0]).argmin()
+    idx_y2 = np.abs(yaxis - ylim[1]).argmin()
+    if idx_y1 > idx_y2:
+        idx_y1, idx_y2 = idx_y2, idx_y1
 
+    return np.nansum(data[idx_y1:idx_y2, idx_x1:idx_x2])
 
 ########################
 ## plotting functions ##
@@ -689,11 +726,35 @@ def check_url(url):
         flag = False
     return flag
 
-def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00'):
-    fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+def download_data_l2_pub(target, date, mode='*', lv='02', vr='00'):
+    fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
     yr = date[0:4]
-    url = url_l2p + target + '/' + yr + '/' + fn
-    dir = os.path.join(dataloc_l2p, target, yr)
+    url = url_l2_pub + fn
+    #dir = os.path.join(dataloc, target, yr)
+    dir = dataloc
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        flag = check_url(url)
+        if flag:
+            print("File "+fn+" is downloading to the local computer.")
+            ret = urllib.request.urlretrieve(url, fn_full)
+        else:
+            print("No file "+fn+".")
+
+def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00', sky=False):
+    yr = date[0:4]
+    if sky==False:
+        fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+        url = url_l2p + target + '/' + target + '/' + yr + '/' + fn
+        dir = os.path.join(dataloc_l2p, target, target, yr)
+    else:
+        fn = 'exeuv_sky_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+        url = url_l2p + target + '/sky/' + yr + '/' + fn
+        dir = os.path.join(dataloc_l2p, target, 'sky', yr)
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
     is_file = os.path.isfile(fn_full)
