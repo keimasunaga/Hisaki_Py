@@ -4,6 +4,9 @@ import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
 import urllib.request
+from scipy.ndimage import map_coordinatesAdd commentMore actions
+import scipy.io as sio
+import cv2 
 
 from .env import get_env
 from .time import str2Dt, get_timeDt_mean
@@ -152,7 +155,7 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
         if np.size(fname) == 0:
             print('---- No data found, returning an empty list ----')
         return fname
-    
+
 def fname2date(fname):
     if type(fname) is str:
         name_splt = fname.split('.')
@@ -473,6 +476,62 @@ def get_total_count(data, xaxis, yaxis, xlim, ylim):
         idx_y1, idx_y2 = idx_y2, idx_y1
 
     return np.nansum(data[idx_y1:idx_y2, idx_x1:idx_x2])
+
+
+def check_y_pol(hskdat):Add commentMore actions
+    #Check satellite Y-axis polarlizaion
+    SLX1DEC = hskdat.get_header_value('SLX1DEC')[0]
+    SLX3DEC = hskdat.get_header_value('SLX3DEC')[0]
+    delta_dec = SLX1DEC- SLX3DEC
+    if delta_dec >= 0:
+        y_pol = 1
+    else:
+        y_pol = 0
+    return y_pol
+
+
+def exc_cal_venus(hskdat,n_img =1):
+    y_pol = check_y_pol(hskdat)
+    if y_pol == 1:
+        x_table = sio.readsav("xtable_0.sav")
+        map1 = np.array(x_table['x_table'],dtype=np.float32)
+        wl = np.array(x_table['wl'],dtype=np.float32)
+    else:
+        x_table = sio.readsav("xtable_1.sav")
+        map1 = np.array(x_table['x_table'],dtype=np.float32)
+        wl = np.array(x_table['wl'],dtype=np.float32)
+    y_table =  sio.readsav("y_table.sav")
+    map2 = np.array(y_table['y_table'],dtype=np.float32)
+    pscl_s  = 4.23 #exceed plate scale (y-axis) [arcsec/pix]
+    yarr = (np.arange(0,1024)- 575)*pscl_s
+
+
+    img_ucal = hskdat.get_img(n_img)
+    ones = np.ones_like(img_ucal, dtype=np.float32)
+    coords = np.array([map2.ravel(), map1.ravel()])
+    img_cal = map_coordinates(img_ucal, coords, order=0, mode='constant').reshape(img_ucal.shape)
+    img_cal = img_cal/np.sum(img_cal)*np.sum(img_ucal)
+    print("Before calibration sum:", np.sum(img_ucal))
+    print("After calibration sum:", np.sum(img_cal))
+
+
+    fig = plt.figure(figsize=(12,12))
+    plt.subplot(2,1,1)
+    mesh_ucal = plt.pcolormesh(wl, yarr, img_ucal, cmap='inferno',norm=colors.LogNorm())
+    plt.colorbar(mesh_ucal, label='counts')
+    plt.xlabel('Wavelength [Å]')
+    plt.ylabel('bins')
+    plt.title('Uncal')
+    plt.ylim(-200,200)
+    plt.subplot(2,1,2)
+    mesh_cal = plt.pcolormesh(wl, yarr, img_cal, cmap='inferno',norm=colors.LogNorm())
+    plt.colorbar(mesh_cal, label='counts')
+    plt.xlabel('Wavelength [Å]')
+    plt.ylabel('bins')
+    plt.title('Cal')
+    plt.ylim(-200,200)
+
+    return img_cal
 
 ########################
 ## plotting functions ##
