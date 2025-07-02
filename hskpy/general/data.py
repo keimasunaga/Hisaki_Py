@@ -4,14 +4,20 @@ import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
 import urllib.request
+from scipy.ndimage import map_coordinates
+import scipy.io as sio
+import cv2 
 
 from .env import get_env
-from .time import str2Dt
+from .time import str2Dt, get_timeDt_mean
 from .calib import get_cal_daily, get_cal, get_xbin_lim
 
 # Hisaki data location
-dataloc = get_env('dataloc_hsk')
-dataloc_l2p = get_env('l2pdataloc_hsk')
+dataloc = get_env('hsk_l2_data_loc')
+dataloc_l2p = get_env('hsk_l2p_data_loc')
+url_l2p = get_env('hsk_l2p_data_url')
+url_l2  = get_env('hsk_l2_data_url')
+url_l2_pub  = get_env('hsk_l2_data_url_pub')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -51,13 +57,11 @@ class HskData:
         self.hdul.close()
         print('---- The fits data closed. ----')
 
-    def get_nextend(self):
-        self.nextend = self.hdul[ext_primary].header['NEXTEND']
-        return self.nextend
+    def get_nextend(self, exclude_offset=False):
+        return get_nextend(self.hdul, exclude_offset)
 
     def get_ext_all(self):
-        self.get_nextend()
-        return list(range(self.ext_offset, self.nextend))
+        return get_ext_all(self.hdul)
 
     def get_img(self, ext=1):
         return get_img(self.hdul, ext)
@@ -79,8 +83,8 @@ class HskData:
             self.xcal, self.C2R, self.C2Rtbl = get_cal()
             return self.xcal, self.C2R, self.C2Rtbl
 
-    def get_ext_seorb(self, delta_thre=2500):
-        return get_ext_seorb(self.hdul, delta_thre)
+    def get_ext_seorb(self, delta_thre=2500, add_first_and_last_exts=False):
+        return get_ext_seorb(self.hdul, delta_thre, add_first_and_last_exts)
 
     def get_calflg(self, ext=None, string=True):
         return get_calflg(self.hdul, ext, string)
@@ -123,15 +127,19 @@ class HskData:
 
 
 def get_fname(target, date='*', mode='*', lv='02', vr='00',
-              lt='00-24', dt='00106',
+              lt='00-24', dt='00106', sky=False, # for level-2 prime data
               fullpath=False):
 
     if lv=='02':
         pattern = 'exeuv.'+ target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.' + vr + '.fits'
         filepath = glob.glob(os.path.join(dataloc, pattern))
     elif lv=='l2p':
-        pattern = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
-        filepath = glob.glob(os.path.join(dataloc_l2p, target, pattern))
+        if sky==False:
+            pattern = 'exeuv_' + target + '_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+            filepath = glob.glob(os.path.join(dataloc_l2p, target, target, date[0:4], pattern))
+        else:
+            pattern = 'exeuv_sky_' + date + '_lv02p_LT' + lt + '_dt' + dt + '_vr' + vr + '.fits'
+            filepath = glob.glob(os.path.join(dataloc_l2p, target, 'sky', date[0:4], pattern))
 
     if fullpath:
         if np.size(filepath) == 1:
@@ -147,7 +155,7 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
         if np.size(fname) == 0:
             print('---- No data found, returning an empty list ----')
         return fname
-
+    
 def fname2date(fname):
     if type(fname) is str:
         name_splt = fname.split('.')
@@ -186,13 +194,25 @@ def fitsclose(hdul):
     hdul.close()
     print('---- The fits data closed. ----')
 
-def get_nextend(hdul):
+def get_nextend(hdul, exclude_offset=False):
+    '''
+    returns NEXTEND read by the primary data (ext=0).
+    Note that NEXTEND does NOT count the extension of the primary data but DOES count the total data.
+    When NEXTEND=n_ext, this means that fits have n_ext of spectrum data (total spectrum and each exposure spectrum) in addition to the primary data.
+    Extensions thus consist of 0 (primary), 1 (total), 2, ..., n_ext.
+    Therefore, when you want to read each header data expect for primary and total extensions, you have to read from ext=2 to n_ext. (i.e., list(range(2, n_ext+1)) )
+    '''
     nextend = hdul[ext_primary].header['NEXTEND']
+    if exclude_offset:
+        nextend = nextend - 1
     return nextend
 
 def get_ext_all(hdul):
+    '''
+    Returns each extension expect for primary and total., i.e., n_ext starting from 2 to n_ext+1.
+    '''
     nextend = get_nextend(hdul)
-    return list(range(ext_offset, nextend))
+    return list(range(ext_offset, nextend+1))
 
 def get_img(hdul, ext=1):
     '''
@@ -231,8 +251,8 @@ def get_header_value(hdul, header_name, ext=None, fix=False):
         if fix == True:
                 hdul.verify('fix')
         if ext is None:
-            n_ext = hdul[0].header['NEXTEND']
-            hdvalue = np.array([hdul[i].header[header_name] for i in range(ext_offset, n_ext)])
+            ext_all = get_ext_all(hdul)
+            hdvalue = np.array([hdul[i].header[header_name] for i in ext_all])
         else:
             if np.size(ext) == 1:
                 hdvalue = hdul[ext].header[header_name]
@@ -243,8 +263,8 @@ def get_header_value(hdul, header_name, ext=None, fix=False):
         if fix == True:
                 hdul.verify('fix')
         if ext is None:
-            n_ext = hdul[0].header['NEXTEND']
-            [[hdvalue.update({j: np.array([hdul[i].header[j] for i in range(ext_offset, n_ext)])})] for j in header_name]
+            ext_all = get_ext_all(hdul)
+            [[hdvalue.update({j: np.array([hdul[i].header[j] for i in ext_all])})] for j in header_name]
         else:
             if np.size(ext) == 1:
                 [hdvalue.update({j: hdul[ext].header[j]}) for j in header_name]
@@ -263,38 +283,42 @@ def get_timeDt(hdul, ext=None):
     return: one datetime or a list of them
     '''
     if ext is None:
-        n_ext = hdul[0].header['NEXTEND']
-        timeDt = np.array([str2Dt(hdul[i].header['DATE-OBS']) + timedelta(seconds=30) for i in range(ext_offset, n_ext)])
+        ext_all = get_ext_all(hdul)
+        timeDt = np.array([get_timeDt_mean( [ str2Dt(hdul[i].header['DATE-OBS']), str2Dt(hdul[i].header['DATE-END']) ] ) for i in ext_all])
 
     else:
         if np.size(ext) == 1:
             if type(ext) is int:
-                timeDt = str2Dt(hdul[ext].header['DATE-OBS']) + timedelta(seconds=30)
+                sDt = str2Dt(hdul[ext].header['DATE-OBS'])
+                eDt = str2Dt(hdul[ext].header['DATE-END'])
+                timeDt = get_timeDt_mean([sDt,eDt])
             else:
-                timeDt = str2Dt(hdul[ext[0]].header['DATE-OBS']) + timedelta(seconds=30)
+                sDt = str2Dt(hdul[ext[0]].header['DATE-OBS'])
+                eDt = str2Dt(hdul[ext[0]].header['DATE-END'])
+                timeDt = get_timeDt_mean([sDt,eDt])
         else:
-            timeDt = np.array([str2Dt(hdul[i].header['DATE-OBS']) + timedelta(seconds=30) for i in ext])
+            timeDt = np.array([get_timeDt_mean( [str2Dt(hdul[i].header['DATE-OBS']), str2Dt(hdul[i].header['DATE-END'])] ) for i in ext])
 
     return timeDt
 
-def get_ext_seorb(hdul, delta_thre=2500):
+def get_ext_seorb(hdul, delta_thre=60, add_first_and_last_exts=False):
 
     timeDt = get_timeDt(hdul)
-    ext_offset = 2
-    n_ext = np.size(timeDt)
-    ext_all = list(range(ext_offset, ext_offset+n_ext))
+    ext_all = get_ext_all(hdul)
     if len(ext_all) == 0:
         return None, None
     else:
-        delta = timeDt[1:-1] - timeDt[0:-2]
+        delta = timeDt[1:] - timeDt[0:-1]
         sec_arr = np.array([idelta.seconds for idelta in delta])
         idx = np.where(sec_arr > delta_thre)[0]
         ext_e = idx + ext_offset
         ext_s = ext_e + 1
-        ext_s2 = np.append(ext_all[0], ext_s)
-        ext_e2 = np.append(ext_e, ext_all[-1])
 
-        return ext_s2, ext_e2
+        if add_first_and_last_exts:
+            ext_s = np.sort(np.append(ext_s, ext_all[0]))
+            ext_e = np.append(ext_e, ext_all[-1])
+
+        return ext_s, ext_e
 
 
 
@@ -380,7 +404,10 @@ def get_dist_pla_sun(hdul, ext=None):
 
 def get_slit_mode(hdul, ext=None):
     slit_mode = get_header_value(hdul, 'SLITMODE', ext)
-    slit_mode = np.array([int(imod.split()[0]) for imod in slit_mode])
+    if isinstance(slit_mode, str):
+        slit_mode = int(slit_mode.split()[0])
+    else:
+        slit_mode = np.array([int(imod.split()[0]) for imod in slit_mode])
     return slit_mode
 
 
@@ -428,7 +455,27 @@ def get_yslice(data, xlim, mean=False, include_err=False):
             else:
                 return np.nansum(data[:, xlim[0]:xlim[1]], axis=1)
 
+def get_total_count(data, xaxis, yaxis, xlim, ylim):
+    '''
+    get total count in region of interest (xlim x ylim).
+    arg:
+        data: img data (1024 x 1024)
+        xaxis: values of x-axis (angstrom) (1024)
+        yaxis: values of y-axis (arcsec)   (1024)
+        xlim: xrange where counts to be integrated
+        ylim: yrange where counts to be integrated
+    return: total count integrated over xlim x ylim
+    '''
+    idx_x1 = np.abs(xaxis - xlim[0]).argmin()
+    idx_x2 = np.abs(xaxis - xlim[1]).argmin()
+    if idx_x1 > idx_x2:
+        idx_x1, idx_x2 = idx_x2, idx_x1
+    idx_y1 = np.abs(yaxis - ylim[0]).argmin()
+    idx_y2 = np.abs(yaxis - ylim[1]).argmin()
+    if idx_y1 > idx_y2:
+        idx_y1, idx_y2 = idx_y2, idx_y1
 
+    return np.nansum(data[idx_y1:idx_y2, idx_x1:idx_x2])
 
 ########################
 ## plotting functions ##
@@ -438,7 +485,11 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
 
     if ext is None:
         ext = get_ext_all(hdul)
+
+    img = get_img(hdul, ext)
+    ndat = np.size(ext)
     timeDt = get_timeDt(hdul, ext)
+
     if np.size(timeDt)>1:
         Dt_mid = timeDt[int(np.size(timeDt)/2)]
     else:
@@ -450,11 +501,6 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
         print('Cal file does not exist, use v0...')
         xcal, C2R, C2Rtbl = get_cal()
     ycal = np.arange(1024) ## make ycal a keyword later
-    if isinstance(ext, (int, np.integer)):
-        ndat = get_nextend(hdul)
-    else:
-        ndat = np.size(ext)
-    img = get_img(hdul, ext)
 
     #plot
     if ax is None:
@@ -467,8 +513,113 @@ def plot_img(hdul, ext=None, Rayleigh=False, ax=None, **kwarg):
         mesh = ax.pcolormesh(xcal, ycal, img/ndat,  **kwarg)
     return mesh
 
-def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+def plot_xslice(hdul, ext=None, ylim=None, ymean=False, Rayleigh=False, ax=None, **kwarg):
+    '''
+    test
+    '''
+    if ext is None:
+        ext = get_ext_all(hdul)
+    timeDt = get_timeDt(hdul)
+    Dt_mid = timeDt[int(np.size(timeDt)/2)]
+    date = str(Dt_mid.year).zfill(4) + str(Dt_mid.month).zfill(2) + str(Dt_mid.day).zfill(2)
+    try:
+        xcal, C2R, C2Rtbl = get_cal_daily(date)
+    except FileNotFoundError:
+        print('Cal file does not exist, use v0...')
+        xcal, C2R, C2Rtbl = get_cal()
+    ycal = np.arange(1024)
+    if isinstance(ext, (int, np.integer)):
+        ndat = get_nextend(hdul)
+    else:
+        ndat = np.size(ext)
+    img = get_img(hdul, ext)
+    img_err = np.sqrt(img)
 
+    xslice, xslice_err = get_xslice(img, ylim, include_err=True)
+    ny = ylim[1]-ylim[0]
+
+    if Rayleigh:
+        xprof = xslice/ndat/ny*C2R
+        xprof_err = xslice_err/ndat/ny*C2R
+        ylabel = 'Rayleigh/pix'
+    else:
+        xprof = xslice/ndat
+        xprof_err = xslice_err/ndat
+        ylabel = '#/min'
+        if ymean:
+            xprof /= np.diff(ylim)
+            xprof_err /= np.diff(ylim)
+            ylabel = '#/min/pix'
+
+    #plot
+    if ax is None:
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+    ax_out = ax.errorbar(xcal, xprof, xprof_err, **kwarg)
+    ax.set_xlabel('wavelength [Å]')
+    ax.set_ylabel(ylabel)
+
+    return ax_out
+
+def plot_yslice(hdul, ext=None, wvlim=None, xlim=None, xmean=False,
+               Rayleigh=False, ycal=None, ycal_label='pixel', ax=None, **kwarg):
+
+    if ext is None:
+        ext = get_ext_all(hdul)
+    timeDt = get_timeDt(hdul)
+    Dt_mid = timeDt[int(np.size(timeDt)/2)]
+    date = str(Dt_mid.year).zfill(4) + str(Dt_mid.month).zfill(2) + str(Dt_mid.day).zfill(2)
+    try:
+        xcal, C2R, C2Rtbl = get_cal_daily(date)
+    except FileNotFoundError:
+        print('Cal file does not exist, use v0...')
+        xcal, C2R, C2Rtbl = get_cal()
+    if ycal is None:
+        ycal = np.arange(1024)
+    if wvlim is not None:
+        xlim = get_xbin_lim(wvlim)
+    if isinstance(ext, (int, np.integer)):
+        ndat = get_nextend(hdul)
+    else:
+        ndat = np.size(ext)
+    img = get_img(hdul, ext)
+    img_err = np.sqrt(img)
+
+    yslice, yslice_err = get_yslice(img, xlim, include_err=True)
+    slit_mode = get_slit_mode(hdul, 2)
+    nx_slit = slit_mode/10
+
+    if Rayleigh:
+        C2Ravg = np.mean(C2R[xlim[0]:xlim[1]])
+        yprof = yslice/ndat/nx_slit*C2Ravg
+        yprof_err = yslice_err/ndat/nx_slit*C2Ravg
+        ylabel = 'Rayleigh/pix'
+    else:
+        yprof = yslice/ndat
+        yprof_err = yslice_err/ndat
+        ylabel = '#/min'
+        if xmean:
+            yprof /= nx_slit
+            yprof_err /= nx_slit
+            ylabel = '#/min/pix'
+
+    #plot
+    if ax is None:
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+    ax_out = ax.errorbar(ycal, yprof, yprof_err, **kwarg)
+    ax.set_xlabel(ycal_label)
+    ax.set_ylabel(ylabel)
+    return ax_out
+
+
+
+def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
+    '''
+    This function is replaced with plot_xlsice() and will be obsoleted.
+    '''
     if ext is None:
         ext = get_ext_all(hdul)
     timeDt = get_timeDt(hdul)
@@ -512,7 +663,9 @@ def plot_xprof(hdul, ext=None, ylim=None, wvlim=None, avgpixel=False, Rayleigh=F
     return ax_out
 
 def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False, Rayleigh=False, ax=None, **kwarg):
-
+    '''
+    This function is replaced with plot_ylsice() and will be obsoleted.
+    '''
     if ext is None:
         ext = get_ext_all(hdul)
     timeDt = get_timeDt(hdul)
@@ -553,6 +706,9 @@ def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False,
     return ax_out
 
 
+
+
+
 #############
 ## L2prime ##
 #############
@@ -573,11 +729,35 @@ def check_url(url):
         flag = False
     return flag
 
-def download_data_l2p(target, date, lt='00-24', dt='00106'):
-    fn = 'exeuv.'+ date + '_LT' + lt + '_dt' + dt + '.fits'
-    if target == 'jupiter':
-        url = 'http://octave.gp.tohoku.ac.jp/db/HISAKI/hisaki_l3/l2prime/' + date[0:4] + '/' + fn
-    dir = os.path.join(dataloc_l2p, target)
+def download_data_l2_pub(target, date, mode='*', lv='02', vr='00'):
+    fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
+    yr = date[0:4]
+    url = url_l2_pub + fn
+    #dir = os.path.join(dataloc, target, yr)
+    dir = dataloc
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        flag = check_url(url)
+        if flag:
+            print("File "+fn+" is downloading to the local computer.")
+            ret = urllib.request.urlretrieve(url, fn_full)
+        else:
+            print("No file "+fn+".")
+
+def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00', sky=False):
+    yr = date[0:4]
+    if sky==False:
+        fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+        url = url_l2p + target + '/' + target + '/' + yr + '/' + fn
+        dir = os.path.join(dataloc_l2p, target, target, yr)
+    else:
+        fn = 'exeuv_sky_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+        url = url_l2p + target + '/sky/' + yr + '/' + fn
+        dir = os.path.join(dataloc_l2p, target, 'sky', yr)
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
     is_file = os.path.isfile(fn_full)
@@ -612,3 +792,59 @@ def get_labels(hdul, ext=1):
     y_label = hdul[ext].header['CUNIT2']
     BUNITS = hdul[ext].header['BUNITS']
     return x_label, y_label, BUNITS
+
+#ひさきの検出面の歪み補正
+def check_y_pol(hskdat):
+    #Check satellite Y-axis polarlizaion
+    SLX1DEC = hskdat.get_header_value('SLX1DEC')[0]
+    SLX3DEC = hskdat.get_header_value('SLX3DEC')[0]
+    delta_dec = SLX1DEC- SLX3DEC
+    if delta_dec >= 0:
+        y_pol = 1
+    else:
+        y_pol = 0
+    return y_pol
+
+
+def exc_cal_venus(hskdat,n_img =1):
+    y_pol = check_y_pol(hskdat)
+    if y_pol == 1:
+        x_table = sio.readsav("xtable_0.sav")
+        map1 = np.array(x_table['x_table'],dtype=np.float32)
+        wl = np.array(x_table['wl'],dtype=np.float32)
+    else:
+        x_table = sio.readsav("xtable_1.sav")
+        map1 = np.array(x_table['x_table'],dtype=np.float32)
+        wl = np.array(x_table['wl'],dtype=np.float32)
+    y_table =  sio.readsav("y_table.sav")
+    map2 = np.array(y_table['y_table'],dtype=np.float32)
+    pscl_s  = 4.23 #exceed plate scale (y-axis) [arcsec/pix]
+    yarr = (np.arange(0,1024)- 575)*pscl_s
+
+    
+    img_ucal = hskdat.get_img(n_img)
+    ones = np.ones_like(img_ucal, dtype=np.float32)
+    coords = np.array([map2.ravel(), map1.ravel()])
+    img_cal = map_coordinates(img_ucal, coords, order=0, mode='constant').reshape(img_ucal.shape)
+    img_cal = img_cal/np.sum(img_cal)*np.sum(img_ucal)
+    print("Before calibration sum:", np.sum(img_ucal))
+    print("After calibration sum:", np.sum(img_cal))
+
+ 
+    fig = plt.figure(figsize=(12,12))
+    plt.subplot(2,1,1)
+    mesh_ucal = plt.pcolormesh(wl, yarr, img_ucal, cmap='inferno',norm=colors.LogNorm())
+    plt.colorbar(mesh_ucal, label='counts')
+    plt.xlabel('Wavelength [Å]')
+    plt.ylabel('bins')
+    plt.title('Uncal')
+    plt.ylim(-200,200)
+    plt.subplot(2,1,2)
+    mesh_cal = plt.pcolormesh(wl, yarr, img_cal, cmap='inferno',norm=colors.LogNorm())
+    plt.colorbar(mesh_cal, label='counts')
+    plt.xlabel('Wavelength [Å]')
+    plt.ylabel('bins')
+    plt.title('Cal')
+    plt.ylim(-200,200)
+
+    return img_cal

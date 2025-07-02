@@ -4,10 +4,8 @@ from pathlib import Path
 import astropy.io.fits as fits
 from .env import get_env
 
-# Hisaki data location
-dataloc = get_env('dataloc_hsk')
 # Hisaki calibration data location
-calloc = get_env('calloc_hsk')
+calloc = get_env('hsk_cal_data_loc')
 
 def get_cal():
     '''
@@ -35,13 +33,52 @@ def get_cal_daily(date):
     Unit of C2Rtbl: Rayleigh/(cnts/min); (cnts/min)/pixel to Rayleigh/pixel
     '''
 
-    fname_cal = 'calib_' + date + '_v1.0.fits' #'calib_v1.0.fits'
+    fname_cal = 'calib_' + date + '_v1.0.fits'
     path_cal = calloc + fname_cal
     with fits.open(path_cal) as hdul_cal:
         xcal = hdul_cal[1].data[550]  ## 550 is just a random y bin because the cal data has no dependence in the y direction
         C2Rtbl = hdul_cal[3].data
         C2R = hdul_cal[3].data[550]
     return xcal, C2R, C2Rtbl
+
+
+def get_cal_ver(lv='l2', vr='1.0'):
+    '''
+    Get information of calibration data.
+    arg:
+        lv: 'l2' or 'l2p'
+        vr: '1.0' or '1.1'
+    return:
+        tuple (xcal, ycal, C2R, C2Rtbl) for l2
+        tuple (xcal, ycal, C2Rtbl_n, C2Rtbl_s) for l2
+            C2Rtbl_n is table for northward Y-POL
+            C2Rtbl_s is table for southward Y-POL
+    Unit of C2Rtbl: Rayleigh/(cnts/min); (cnts/min)/pixel to Rayleigh/pixel
+   '''
+
+    fname_cal = 'calib_' + lv + '_v' + vr + '.fits'
+    path_cal = calloc + fname_cal
+    with fits.open(path_cal) as hdul_cal:
+        if lv=='l2p':
+            NAXIS1 = int(hdul_cal[1].header['NAXIS1'])
+            CRVAL1 = float(hdul_cal[1].header['CRVAL1'])
+            CRPIX1 = float(hdul_cal[1].header['CRPIX1'])
+            CDELT1 = float(hdul_cal[1].header['CDELT1'])
+            xcal = CRVAL1 + (np.arange(NAXIS1) - CRPIX1) * CDELT1
+            NAXIS2 = int(hdul_cal[1].header['NAXIS2'])
+            CRVAL2 = float(hdul_cal[1].header['CRVAL2'])
+            CDELT2 = float(hdul_cal[1].header['CDELT2'])
+            CRPIX2 = float(hdul_cal[1].header['CRPIX2'])
+            ycal = CRVAL2 + (np.arange(NAXIS2) - CRPIX2) * CDELT2
+            C2Rtbl_n = hdul_cal[1].data
+            C2Rtbl_s = hdul_cal[2].data
+            return xcal, ycal, C2Rtbl_n, C2Rtbl_s
+        else:
+            xcal = hdul_cal[1].data[550]   ## 550 is just a random y bin because the cal data has no dependence in the y direction
+            ycal = hdul_cal[2].data[:,550]
+            C2Rtbl = hdul_cal[3].data
+            C2R = hdul_cal[3].data[550]
+            return xcal, ycal, C2R, C2Rtbl
 
 
 def get_nearest_xbin(wv, shift=0):
