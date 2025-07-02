@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import urllib.request
 from scipy.ndimage import map_coordinatesAdd commentMore actions
 import scipy.io as sio
-import cv2 
+import cv2
 
 from .env import get_env
 from .time import str2Dt, get_timeDt_mean
@@ -478,10 +478,10 @@ def get_total_count(data, xaxis, yaxis, xlim, ylim):
     return np.nansum(data[idx_y1:idx_y2, idx_x1:idx_x2])
 
 
-def check_y_pol(hskdat):Add commentMore actions
-    #Check satellite Y-axis polarlizaion
-    SLX1DEC = hskdat.get_header_value('SLX1DEC')[0]
-    SLX3DEC = hskdat.get_header_value('SLX3DEC')[0]
+def check_y_pol(hdul, ext):
+    '''Check satellite Y-axis polarlizaion'''
+    SLX1DEC = get_header_value(hdul,'SLX1DEC')[ext]
+    SLX3DEC = get_header_value(hdul,'SLX3DEC')[ext]
     delta_dec = SLX1DEC- SLX3DEC
     if delta_dec >= 0:
         y_pol = 1
