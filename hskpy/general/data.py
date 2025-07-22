@@ -3,11 +3,11 @@ import numpy as np
 import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import urllib.request
-import requests
 from scipy.ndimage import map_coordinates
 import scipy.io as sio
-#import cv2 
+from pathlib import Path
 
 from .env import get_env
 from .time import str2Dt, get_timeDt_mean
@@ -26,6 +26,9 @@ url_l3  = get_env('hsk_l3_data_url')
 ext_primary = 0 # Primary
 ext_total = 1   # Total
 ext_offset = 2  # Offset
+
+xscl = 10  # plate scale in spectral direction
+yscl = 4.2 # plate scale in spatial direction
 
 class HskData:
     '''
@@ -158,7 +161,7 @@ def get_fname(target, date='*', mode='*', lv='02', vr='00',
         if np.size(fname) == 0:
             print('---- No data found, returning an empty list ----')
         return fname
-    
+
 def fname2date(fname):
     if type(fname) is str:
         name_splt = fname.split('.')
@@ -479,6 +482,64 @@ def get_total_count(data, xaxis, yaxis, xlim, ylim):
         idx_y1, idx_y2 = idx_y2, idx_y1
 
     return np.nansum(data[idx_y1:idx_y2, idx_x1:idx_x2])
+
+
+def check_y_pol(hdul, ext):
+    '''Check satellite Y-axis polarlizaion'''
+    SLX1DEC = get_header_value(hdul,'SLX1DEC')[ext]
+    SLX3DEC = get_header_value(hdul,'SLX3DEC')[ext]
+    delta_dec = SLX1DEC- SLX3DEC
+    if delta_dec >= 0:
+        y_pol = 1
+    else:
+        y_pol = 0
+    return y_pol
+
+def correct_distortion(img_ucal, y_pol, plot=False):
+    '''
+    Correct the distortion of 2D spectral image
+    TODO: implement this function later
+    Currently not used.
+    """
+    '''
+    parent = Path(__file__).resolve().parent
+    if y_pol == 1:
+        x_table = sio.readsav(parent.joinpath("sav/xtable_0.sav"))
+        map1 = np.array(x_table['x_table'],dtype=np.float32)
+        wl = np.array(x_table['wl'],dtype=np.float32)
+    else:
+        x_table = sio.readsav(parent.joinpath("sav/xtable_1.sav"))
+        map1 = np.array(x_table['x_table'],dtype=np.float32)
+        wl = np.array(x_table['wl'],dtype=np.float32)
+    y_table =  sio.readsav(parent.joinpath("sav/y_table.sav"))
+    map2 = np.array(y_table['y_table'],dtype=np.float32)
+    yarr = (np.arange(0,1024)- 575)*yscl  # Need to confirm what 575 indicates.
+
+    ones = np.ones_like(img_ucal, dtype=np.float32)
+    coords = np.array([map2.ravel(), map1.ravel()])
+    img_cal = map_coordinates(img_ucal, coords, order=0, mode='constant').reshape(img_ucal.shape)
+    img_cal = img_cal/np.sum(img_cal)*np.sum(img_ucal)
+    print("Before calibration sum:", np.sum(img_ucal))
+    print("After calibration sum:", np.sum(img_cal))
+
+    if plot:
+        fig = plt.figure(figsize=(12,12))
+        plt.subplot(2,1,1)
+        mesh_ucal = plt.pcolormesh(wl, yarr, img_ucal, cmap='inferno',norm=colors.LogNorm())
+        plt.colorbar(mesh_ucal, label='counts')
+        plt.xlabel('Wavelength [Å]')
+        plt.ylabel('bins')
+        plt.title('Uncal')
+        plt.ylim(-200,200)
+        plt.subplot(2,1,2)
+        mesh_cal = plt.pcolormesh(wl, yarr, img_cal, cmap='inferno',norm=colors.LogNorm())
+        plt.colorbar(mesh_cal, label='counts')
+        plt.xlabel('Wavelength [Å]')
+        plt.ylabel('bins')
+        plt.title('Cal')
+        plt.ylim(-200,200)
+
+    return img_cal
 
 ########################
 ## plotting functions ##
