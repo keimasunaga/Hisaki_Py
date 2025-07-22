@@ -4,9 +4,10 @@ import astropy.io.fits as fits
 from datetime import timedelta
 import matplotlib.pyplot as plt
 import urllib.request
+import requests
 from scipy.ndimage import map_coordinates
 import scipy.io as sio
-import cv2 
+#import cv2 
 
 from .env import get_env
 from .time import str2Dt, get_timeDt_mean
@@ -15,9 +16,11 @@ from .calib import get_cal_daily, get_cal, get_xbin_lim
 # Hisaki data location
 dataloc = get_env('hsk_l2_data_loc')
 dataloc_l2p = get_env('hsk_l2p_data_loc')
+dataloc_l3 = get_env('hsk_l3_data_loc')
 url_l2p = get_env('hsk_l2p_data_url')
 url_l2  = get_env('hsk_l2_data_url')
 url_l2_pub  = get_env('hsk_l2_data_url_pub')
+url_l3  = get_env('hsk_l3_data_url')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -706,49 +709,94 @@ def plot_yprof(hdul, ext=None, xlim=None, wvlim=None, ycal=None, avgpixel=False,
     return ax_out
 
 
-
-
-
-#############
-## L2prime ##
-#############
-def check_url(url):
-    '''Checks if the file in url exists in your local environment
-       args:
-        url: data file url
-       returns:
-        flag: bools
-    '''
-    flag = True
-    try:
-        f = urllib.request.urlopen(url)
-        print('OK:', url)
-        f.close()
-    except urllib.request.HTTPError:
-        print('Not found:', url)
-        flag = False
-    return flag
-
 def download_data_l2_pub(target, date, mode='*', lv='02', vr='00'):
+    '''
+    Download the Hisaki Level-2 data from a public data server at ISAS/DARTS
+       args:
+        target:     target name. e.g. 'jupiter'
+        date:       date. e.g. '20240101'
+        mode:       observation mode
+        lv:         Level number
+        vr:         File version
+       returns:
+        N.A.
+    '''
+    # Source
     fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
-    yr = date[0:4]
     url = url_l2_pub + fn
-    #dir = os.path.join(dataloc, target, yr)
+
+    # Destination
     dir = dataloc
     os.makedirs(dir, exist_ok=True)
     fn_full = os.path.join(dir, fn)
     is_file = os.path.isfile(fn_full)
+
     if is_file:
         print("File "+fn+" exists in the local computer.")
     else:
-        flag = check_url(url)
-        if flag:
+        response = requests.get(url)
+        # Check status
+        if response.status_code == 200:
             print("File "+fn+" is downloading to the local computer.")
-            ret = urllib.request.urlretrieve(url, fn_full)
+            with open(fn_full, 'wb') as f:
+                f.write(response.content)
         else:
-            print("No file "+fn+".")
+            print('Download failed:', response.status_code, response.reason)
+
+def download_data_l2(target, date, mode='*', lv='02', vr='00', uname='hisaki', passwd=None):
+    '''
+    Download the Hisaki Level-2 data from an access limitted data server at ISAS/DARTS
+       args:
+        target:     target name. e.g. 'jupiter'
+        date:       date. e.g. '20240101'
+        mode:       observation mode
+        lv:         Level number
+        vr:         File version
+        uname:      user name
+        passwd:     password 
+       returns:
+        N.A.
+    '''
+    # Source
+    fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
+    url = url_l2 + fn
+
+    # Destination
+    dir = dataloc
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        response = requests.get(url, auth=(uname, passwd))
+        # Check status
+        if response.status_code == 200:
+            print("File "+fn+" is downloading to the local computer.")
+            with open(fn_full, 'wb') as f:
+                f.write(response.content)
+        else:
+            print('Download failed:', response.status_code, response.reason)
+
+#############
+## L2prime ##
+#############
 
 def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00', sky=False):
+    '''
+    Download the Hisaki Level-2 prime data from a data server at Tohoku Univ.
+       args:
+        target:     target name. e.g. 'jupiter'
+        date:       date. e.g. '20240101'
+        lv:         Level number
+        lt:         Local time range of the data '00-24' or '20-04'
+        dt:         Time step '00010' or '00106'
+        vr:         File version
+        sky:        If Ture, download sky data
+       returns:
+        fn:         Full path to the downloaded data file
+    '''
     yr = date[0:4]
     if sky==False:
         fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
@@ -764,12 +812,54 @@ def download_data_l2p(target, date, lv='02p', lt='00-24', dt='00106', vr='01_00'
     if is_file:
         print("File "+fn+" exists in the local computer.")
     else:
-        flag = check_url(url)
-        if flag:
+        response = requests.get(url)
+        # Check status
+        if response.status_code == 200:
             print("File "+fn+" is downloading to the local computer.")
-            ret = urllib.request.urlretrieve(url, fn_full)
+            with open(fn_full, 'wb') as f:
+                f.write(response.content)
         else:
-            print("No file "+fn+".")
+            print('Download failed:', response.status_code, response.reason)
+
+    return(fn_full)
+
+def download_data_l3(target, date, lv='03', lt='00-24', dt='00010', vr='01_00'):
+    '''
+    Download the Hisaki Level-3 data from a data server at Tohoku Univ.
+       args:
+        target:     target name. e.g. 'aurora' or 'torus'
+        date:       date. e.g. '20240101'
+        lv:         Level number
+        lt:         Local time range of the data '00-24'
+        dt:         Time step '00010' or '00106'
+        vr:         File version
+       returns:
+        fn:         Full path to the downloaded data file
+    '''
+    if target == 'aurora':
+        target_dir = target
+    else:
+        target_dir = 'roi50-70'
+    fn = 'exeuv_'+ target + '_' + date + '_lv' + lv + '_LT' + lt + '_dt' + dt + '_vr'+ vr + '.fits'
+    url = url_l3 + target_dir + '/' + fn
+    dir = os.path.join(dataloc_l3, target_dir)
+
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        response = requests.get(url)
+        # Check status
+        if response.status_code == 200:
+            print("File "+fn+" is downloading to the local computer.")
+            with open(fn_full, 'wb') as f:
+                f.write(response.content)
+        else:
+            print('Download failed:', response.status_code, response.reason)
+
+    return(fn_full)
 
 def get_xaxis(hdul, ext=1):
     NAXIS1 = int(hdul[ext].header['NAXIS1'])
@@ -793,9 +883,14 @@ def get_labels(hdul, ext=1):
     BUNITS = hdul[ext].header['BUNITS']
     return x_label, y_label, BUNITS
 
-#ひさきの検出面の歪み補正
 def check_y_pol(hskdat):
-    #Check satellite Y-axis polarlizaion
+    '''
+    Check satellite Y-axis polarlizaion
+       args:
+        hskdat
+       returns:
+        y_pol:      Y-axis polarlizaion
+    '''
     SLX1DEC = hskdat.get_header_value('SLX1DEC')[0]
     SLX3DEC = hskdat.get_header_value('SLX3DEC')[0]
     delta_dec = SLX1DEC- SLX3DEC
