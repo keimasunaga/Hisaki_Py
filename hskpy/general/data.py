@@ -21,6 +21,7 @@ url_l2p = get_env('hsk_l2p_data_url')
 url_l2  = get_env('hsk_l2_data_url')
 url_l2_pub  = get_env('hsk_l2_data_url_pub')
 url_l3  = get_env('hsk_l3_data_url')
+url_fov  = get_env('hsk_fov_data_url')
 
 # Characteristic extensions
 ext_primary = 0 # Primary
@@ -539,7 +540,8 @@ def correct_distortion(img_ucal, y_pol, plot=False):
         plt.title('Cal')
         plt.ylim(-200,200)
 
-    return img_cal
+    return img_cal, wl, yarr
+    #return img_cal
 
 ########################
 ## plotting functions ##
@@ -821,6 +823,43 @@ def download_data_l2(target, date, mode='*', lv='02', vr='00', uname='hisaki', p
     # Source
     fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
     url = url_l2 + fn
+
+    # Destination
+    dir = dataloc
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        response = requests.get(url, auth=(uname, passwd))
+        # Check status
+        if response.status_code == 200:
+            print("File "+fn+" is downloading to the local computer.")
+            with open(fn_full, 'wb') as f:
+                f.write(response.content)
+        else:
+            print('Download failed:', response.status_code, response.reason)
+
+
+def download_data_fov(target, date, mode='*', lv='01', vr='00', uname='hisaki', passwd=None):
+    '''
+    Download the Hisaki Level-2 data from an access limitted data server at ISAS/DARTS
+       args:
+        target:     target name. e.g. 'jupiter'
+        date:       date. e.g. '20240101'
+        mode:       observation mode
+        lv:         Level number
+        vr:         File version
+        uname:      user name
+        passwd:     password 
+       returns:
+        N.A.
+    '''
+    # Source
+    fn = 'exfov.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
+    url = url_fov + fn
 
     # Destination
     dir = dataloc
