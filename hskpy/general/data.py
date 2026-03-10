@@ -498,9 +498,13 @@ def check_y_pol(hdul, ext):
 def correct_distortion(img_ucal, y_pol, plot=False):
     '''
     Correct the distortion of 2D spectral image
-    TODO: implement this function later
-    Currently not used.
-    """
+    arg:
+        img_ucal:   image data before correcting correct_distortion (1024 x 1024)
+        y_pol:      satellite Y-axis polarlizaion (0 or 1), which is obtained by check_y_pol
+    return: 
+        img_cal:    image data after correcting correct_distortion (1024 x 1024)
+        wl:         wavelength [A]
+        yarr:       arcsec along the slit
     '''
     parent = Path(__file__).resolve().parent
     if y_pol == 1:
@@ -540,7 +544,6 @@ def correct_distortion(img_ucal, y_pol, plot=False):
         plt.ylim(-200,200)
 
     return img_cal, wl, yarr
-    #return img_cal
 
 ########################
 ## plotting functions ##
