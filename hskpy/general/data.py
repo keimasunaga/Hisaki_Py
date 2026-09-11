@@ -788,7 +788,7 @@ def download_data_l2_pub(target, date, mode='*', lv='02', vr='00'):
     '''
     # Source
     fn = 'exeuv.' + target + '.mod.' + mode + '.' + date + '.lv.' + lv + '.vr.'+ vr + '.fits'
-    url = url_l2_pub + fn
+    url = url_l2_pub + 'vr' + vr + '/' + fn
 
     # Destination
     dir = dataloc

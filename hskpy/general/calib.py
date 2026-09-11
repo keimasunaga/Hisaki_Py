@@ -3,9 +3,11 @@ import os
 from pathlib import Path
 import astropy.io.fits as fits
 from .env import get_env
+import requests
 
 # Hisaki calibration data location
 calloc = get_env('hsk_cal_data_loc')
+url_l2_pub  = get_env('hsk_l2_data_url_pub')
 
 def get_cal():
     '''
@@ -123,3 +125,35 @@ class CalibData:
         rpla_asec = appdia/2
         rpla = (self.ycal - ycent)*4.2/rpla_asec
         return rpla
+
+def download_data_cal(date, vr='1.0'):
+    '''
+    Download the Hisaki Level-2 calibration table from a public access data server at ISAS/DARTS
+       args:
+        date:       date. e.g. '20240101'
+        vr:         File version
+       returns:
+        N.A.
+    '''
+    # Source
+    # calib_20140326_v1.0.fits
+    fn = 'calib_' +  date + '_v'+ vr + '.fits'
+    url = url_l2_pub + '../cal/' + fn
+
+    # Destination
+    dir = calloc
+    os.makedirs(dir, exist_ok=True)
+    fn_full = os.path.join(dir, fn)
+    is_file = os.path.isfile(fn_full)
+
+    if is_file:
+        print("File "+fn+" exists in the local computer.")
+    else:
+        response = requests.get(url)
+        # Check status
+        if response.status_code == 200:
+            print("File "+fn+" is downloading to the local computer.")
+            with open(fn_full, 'wb') as f:
+                f.write(response.content)
+        else:
+            print('Download failed:', response.status_code, response.reason)
